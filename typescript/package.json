@@ -7,7 +7,14 @@
   "scripts": {
     "discover": "tsx src/discover.mjs",
     "lifecycle": "tsx src/lifecycle.mjs",
-    "redeem": "tsx src/redeem.mjs"
+    "redeem": "tsx src/redeem.mjs",
+    "test:pricing": "tsx src/agent/testPricing.ts",
+    "test:mm": "tsx src/agent/testMarketMaker.ts",
+    "test:shield": "tsx src/agent/testHealthShield.ts",
+    "test:settler": "tsx src/agent/testSettler.ts",
+    "agent": "tsx src/agent/index.ts",
+    "start:agent": "tsx src/agent/index.ts",
+    "dashboard": "node ../dashboard/server.mjs"
   },
   "dependencies": {
     "@somnia-chain/markets-sdk": "^0.28.1",

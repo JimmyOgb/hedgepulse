@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HedgePulse AI - Operator Cockpit | Somnia × DreamDEX</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #e2e8f0; }
+    .mono { font-family: 'Fira Code', monospace; }
+    .glow-cyan { box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.3); }
+    .glow-purple { box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.3); }
+    .glow-red { box-shadow: 0 0 20px -5px rgba(239, 68, 68, 0.4); }
+    .glow-green { box-shadow: 0 0 20px -5px rgba(34, 197, 94, 0.3); }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #111827; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+  <!-- TOP NAV / PROTOCOL HEADER -->
+  <header class="border-b border-gray-800/80 bg-gray-950/60 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Status -->
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
+          <i data-lucide="activity" class="w-6 h-6 text-white stroke-[2.5]"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+              HedgePulse <span class="bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">AI</span>
+            </h1>
+            <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800/50">Somnia × DreamDEX</span>
+          </div>
+          <p class="text-xs text-gray-400">Autonomous Binary Market-Maker & DeFi Liquidation Shield</p>
+        </div>
+      </div>
+
+      <!-- Network & Account Telemetry -->
+      <div class="flex flex-wrap items-center gap-3 text-xs">
+        <div class="flex items-center gap-2 bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-lg">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-gray-300 font-medium">Somnia Shannon Testnet</span>
+          <span class="text-gray-500 font-mono">50312</span>
+        </div>
+
+        <div class="bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-lg flex items-center gap-2 font-mono text-gray-300">
+          <i data-lucide="wallet" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span title="0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A">0x19E7...ff2A</span>
+        </div>
+
+        <div class="bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-lg flex items-center gap-3">
+          <span class="text-gray-400">tUSDC: <strong class="text-white font-mono font-semibold" id="bal-usdc">486.00</strong></span>
+          <span class="text-gray-600">|</span>
+          <span class="text-gray-400">STT: <strong class="text-cyan-400 font-mono font-semibold" id="bal-stt">1.50</strong></span>
+          <span class="text-gray-600">|</span>
+          <span class="text-gray-400">Gas: <strong class="text-emerald-400 font-mono" id="gas-fee">6.0 gwei</strong></span>
+        </div>
+
+        <button id="btn-toggle-agent" class="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm shadow-cyan-500/30">
+          <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+          <span id="agent-status-label">Agent Active</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN OPERATOR COCKPIT BODY -->
+  <main class="max-w-7xl mx-auto p-6 space-y-6 flex-1 w-full">
+
+    <!-- HERO METRICS STRIP -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-gray-900/70 border border-gray-800/80 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Underlying Spot</span>
+          <div class="text-xl font-bold font-mono text-white mt-1" id="metric-spot">$90,240.50</div>
+          <span class="text-[11px] text-emerald-400 flex items-center gap-1 mt-0.5"><i data-lucide="trending-up" class="w-3 h-3"></i> +0.27% in window</span>
+        </div>
+        <div class="p-2.5 bg-gray-800/60 rounded-lg text-cyan-400 border border-gray-700/50">
+          <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-gray-900/70 border border-gray-800/80 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Fair P(YES) Φ(d₂)</span>
+          <div class="text-xl font-bold font-mono text-cyan-400 mt-1" id="metric-pyes">52.80%</div>
+          <span class="text-[11px] text-gray-400 mt-0.5">Black-Scholes Binary Model</span>
+        </div>
+        <div class="p-2.5 bg-gray-800/60 rounded-lg text-cyan-400 border border-gray-700/50">
+          <i data-lucide="pie-chart" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+      <div class="bg-gray-900/70 border border-gray-800/80 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Health Factor</span>
+          <div class="text-xl font-bold font-mono text-emerald-400 mt-1" id="metric-hf">1.450</div>
+          <span class="text-[11px] font-semibold text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/50 inline-block mt-0.5" id="metric-hf-status">SAFE (&gt;1.25)</span>
+        </div>
+        <div class="p-2.5 bg-gray-800/60 rounded-lg text-emerald-400 border border-gray-700/50" id="icon-shield-box">
+          <i data-lucide="shield-check" class="w-5 h-5" id="icon-shield"></i>
+        </div>
+      </div>
+
+      <div class="bg-gray-900/70 border border-gray-800/80 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">24h Quoted Volume</span>
+          <div class="text-xl font-bold font-mono text-white mt-1" id="metric-vol">$14,890.00</div>
+          <span class="text-[11px] text-gray-400 mt-0.5">Recycled PnL: <strong class="text-emerald-400 font-mono">+$312.40</strong></span>
+        </div>
+        <div class="p-2.5 bg-gray-800/60 rounded-lg text-purple-400 border border-gray-700/50">
+          <i data-lucide="repeat" class="w-5 h-5"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 CORE PANELS -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- PANEL 1: LIVE MARKET & FAIR PROBABILITY GAUGE (5 Cols) -->
+      <section class="lg:col-span-5 bg-gray-900/60 border border-gray-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+        <div>
+          <div class="flex items-center justify-between pb-3 border-b border-gray-800/80">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 font-bold font-mono text-xs">BTC</span>
+              <h2 class="font-semibold text-white">BTC-90000-15M Event Market</h2>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-2.5 py-1 rounded-md">
+              <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+              <span id="expiry-timer">13m 48s</span>
+            </div>
+          </div>
+
+          <!-- Strike vs Spot Card -->
+          <div class="grid grid-cols-2 gap-3 mt-4 bg-gray-950/50 border border-gray-800/70 rounded-xl p-3.5 text-center">
+            <div>
+              <span class="text-xs text-gray-400">Current Spot</span>
+              <div class="text-lg font-bold font-mono text-white mt-0.5" id="p1-spot">$90,240.50</div>
+            </div>
+            <div class="border-l border-gray-800">
+              <span class="text-xs text-gray-400">Target Strike (K)</span>
+              <div class="text-lg font-bold font-mono text-yellow-400 mt-0.5">$90,000.00</div>
+            </div>
+          </div>
+
+          <!-- Probability Split Gauge -->
+          <div class="mt-5 space-y-2">
+            <div class="flex justify-between items-center text-xs font-medium">
+              <span class="text-emerald-400 flex items-center gap-1"><i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i> Fair YES: <strong class="font-mono text-white text-sm" id="prob-yes-val">52.8%</strong></span>
+              <span class="text-rose-400 flex items-center gap-1"><i data-lucide="arrow-down-right" class="w-3.5 h-3.5"></i> Fair NO: <strong class="font-mono text-white text-sm" id="prob-no-val">47.2%</strong></span>
+            </div>
+            <!-- Dual Color Bar -->
+            <div class="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex p-0.5 border border-gray-700/50">
+              <div id="bar-yes" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-l-full transition-all duration-500" style="width: 52.8%"></div>
+              <div id="bar-no" class="bg-gradient-to-r from-rose-500 to-red-600 h-full rounded-r-full transition-all duration-500" style="width: 47.2%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] font-mono text-gray-500">
+              <span>0.5280 USDC ($0.53)</span>
+              <span>0.4720 USDC ($0.47)</span>
+            </div>
+          </div>
+
+          <!-- Analytical Greeks -->
+          <div class="mt-5 pt-4 border-t border-gray-800/80">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-2">Black-Scholes Option Greeks</span>
+            <div class="grid grid-cols-4 gap-2 text-center text-xs font-mono">
+              <div class="bg-gray-950/40 p-2 rounded-lg border border-gray-800">
+                <span class="text-[10px] text-gray-500 block">Delta (Δ)</span>
+                <span class="text-cyan-400 font-semibold" id="greek-delta">+1.38e-3</span>
+              </div>
+              <div class="bg-gray-950/40 p-2 rounded-lg border border-gray-800">
+                <span class="text-[10px] text-gray-500 block">Gamma (Γ)</span>
+                <span class="text-cyan-400 font-semibold" id="greek-gamma">-2.11e-7</span>
+              </div>
+              <div class="bg-gray-950/40 p-2 rounded-lg border border-gray-800">
+                <span class="text-[10px] text-gray-500 block">Vega (ν)</span>
+                <span class="text-cyan-400 font-semibold" id="greek-vega">-0.0011</span>
+              </div>
+              <div class="bg-gray-950/40 p-2 rounded-lg border border-gray-800">
+                <span class="text-[10px] text-gray-500 block">Theta (θ)</span>
+                <span class="text-cyan-400 font-semibold" id="greek-theta">+3.55e-7</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-gray-800/60 flex items-center justify-between text-xs text-gray-400">
+          <span>Tick Size: <strong class="font-mono text-gray-200">1,000 (0.001)</strong></span>
+          <span>Lot Size: <strong class="font-mono text-gray-200">1,000</strong></span>
+          <span>Pool: <span class="font-mono text-cyan-400">0x1711...4e11</span></span>
+        </div>
+      </section>
+
+      <!-- PANEL 2: LIVE CLOB ORDER BOOK DEPTH (7 Cols) -->
+      <section class="lg:col-span-7 bg-gray-900/60 border border-gray-800 rounded-2xl p-5 flex flex-col shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-800/80">
+          <div class="flex items-center gap-2">
+            <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+            <h2 class="font-semibold text-white">Live CLOB Order Book Depth</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-mono">Spread: <strong class="text-cyan-400">180 bps (1.80%)</strong></span>
+            <span class="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 font-mono">PostOnly Active</span>
+          </div>
+        </div>
+
+        <!-- Book Table -->
+        <div class="mt-3 flex-1 flex flex-col justify-between">
+          <div class="grid grid-cols-4 text-[11px] font-medium text-gray-400 pb-2 border-b border-gray-800 uppercase tracking-wider font-mono">
+            <span>Side</span>
+            <span>Probability Price</span>
+            <span class="text-right">Quantity</span>
+            <span class="text-right">Status</span>
+          </div>
+
+          <!-- ASKS (Red/Purple) -->
+          <div class="space-y-1.5 my-2">
+            <!-- Ask 2 -->
+            <div class="grid grid-cols-4 items-center text-xs font-mono py-1.5 px-2 rounded bg-rose-950/20 border border-rose-900/30 hover:bg-rose-950/40 transition">
+              <span class="text-rose-400 font-semibold flex items-center gap-1"><i data-lucide="arrow-up" class="w-3 h-3"></i> SELL YES</span>
+              <span class="text-rose-300 font-bold" id="ask-yes-px">0.5370 (53.7%)</span>
+              <span class="text-right text-gray-300">2.0000 contracts</span>
+              <span class="text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-900/40 text-rose-300 border border-rose-700/40">RESTING</span></span>
+            </div>
+            <!-- Ask 1 -->
+            <div class="grid grid-cols-4 items-center text-xs font-mono py-1.5 px-2 rounded bg-purple-950/20 border border-purple-900/30 hover:bg-purple-950/40 transition">
+              <span class="text-purple-400 font-semibold flex items-center gap-1"><i data-lucide="arrow-up" class="w-3 h-3"></i> SELL NO</span>
+              <span class="text-purple-300 font-bold" id="ask-no-px">0.4810 (48.1%)</span>
+              <span class="text-right text-gray-300">2.0000 contracts</span>
+              <span class="text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 border border-purple-700/40">RESTING</span></span>
+            </div>
+          </div>
+
+          <!-- MID SPREAD DIVIDER -->
+          <div class="py-1.5 px-3 rounded-lg bg-gray-950 border border-gray-800 flex items-center justify-between text-xs font-mono">
+            <span class="text-gray-400">Midpoint: <strong class="text-white" id="midpoint-val">0.5000 (50.0%)</strong></span>
+            <span class="text-cyan-400 font-medium">HedgePulse Maker Spread: ±90 bps</span>
+          </div>
+
+          <!-- BIDS (Green/Cyan) -->
+          <div class="space-y-1.5 my-2">
+            <!-- Bid 1 -->
+            <div class="grid grid-cols-4 items-center text-xs font-mono py-1.5 px-2 rounded bg-emerald-950/20 border border-emerald-900/30 hover:bg-emerald-950/40 transition">
+              <span class="text-emerald-400 font-semibold flex items-center gap-1"><i data-lucide="arrow-down" class="w-3 h-3"></i> BUY YES</span>
+              <span class="text-emerald-300 font-bold" id="bid-yes-px">0.5190 (51.9%)</span>
+              <span class="text-right text-gray-300">2.0000 contracts</span>
+              <span class="text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-700/40">RESTING</span></span>
+            </div>
+            <!-- Bid 2 -->
+            <div class="grid grid-cols-4 items-center text-xs font-mono py-1.5 px-2 rounded bg-teal-950/20 border border-teal-900/30 hover:bg-teal-950/40 transition">
+              <span class="text-teal-400 font-semibold flex items-center gap-1"><i data-lucide="arrow-down" class="w-3 h-3"></i> BUY NO</span>
+              <span class="text-teal-300 font-bold" id="bid-no-px">0.4630 (46.3%)</span>
+              <span class="text-right text-gray-300">2.0000 contracts</span>
+              <span class="text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-teal-900/40 text-teal-300 border border-teal-700/40">RESTING</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-400">
+          <span class="flex items-center gap-1 text-emerald-400"><i data-lucide="shield" class="w-3.5 h-3.5"></i> PostOnlyWouldCross Defensive Guard Enabled</span>
+          <button id="btn-refresh-quotes" class="text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 transition">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Reprice
+          </button>
+        </div>
+      </section>
+
+      <!-- PANEL 3: SOMNIALEND HEALTH SHIELD COCKPIT (6 Cols) -->
+      <section class="lg:col-span-6 bg-gray-900/60 border border-gray-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between" id="panel-shield">
+        <div>
+          <div class="flex items-center justify-between pb-3 border-b border-gray-800/80">
+            <div class="flex items-center gap-2">
+              <div class="p-1 rounded bg-emerald-500/20 text-emerald-400">
+                <i data-lucide="shield" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h2 class="font-semibold text-white">SomniaLend Health Shield</h2>
+                <span class="text-[11px] text-gray-400">Aave v3 Liquidation Defense & Downside Coverage</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-gray-400">Trigger Threshold</span>
+              <div class="text-xs font-mono font-bold text-amber-400">&lt; 1.200 HF</div>
+            </div>
+          </div>
+
+          <!-- Position Summary Strip -->
+          <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono my-3 bg-gray-950/40 p-2.5 rounded-xl border border-gray-800">
+            <div>
+              <span class="text-[10px] text-gray-500">Supplied Collateral</span>
+              <div class="font-bold text-white">$10,000 USD</div>
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-500">Total Borrowed</span>
+              <div class="font-bold text-rose-400">$6,500 USD</div>
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-500">Liq. Threshold</span>
+              <div class="font-bold text-cyan-400">80.0%</div>
+            </div>
+          </div>
+
+          <!-- INTERACTIVE SLIDER FOR DEMO PRESENTATIONS -->
+          <div class="mt-4 p-4 rounded-xl bg-gray-950 border border-gray-800/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <label for="hf-slider" class="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-cyan-400"></i> Interactive Health Factor Simulation
+              </label>
+              <div class="text-right">
+                <span class="text-lg font-bold font-mono" id="slider-hf-val">1.450</span>
+              </div>
+            </div>
+
+            <input type="range" id="hf-slider" min="0.95" max="1.60" step="0.01" value="1.45"
+              class="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+
+            <div class="flex justify-between text-[10px] font-mono text-gray-500 font-medium">
+              <span class="text-rose-400 font-semibold">0.95 (Liquidatable)</span>
+              <span class="text-rose-300">1.15 (Emergency)</span>
+              <span class="text-amber-400 font-semibold">1.20 (Hedge Trigger)</span>
+              <span class="text-emerald-400">1.25 (Alert)</span>
+              <span class="text-emerald-300 font-semibold">1.60 (Safe)</span>
+            </div>
+
+            <!-- Quick Preset Buttons -->
+            <div class="flex items-center gap-2 pt-1">
+              <span class="text-[11px] text-gray-400">Presets:</span>
+              <button id="preset-safe" class="px-2 py-0.5 text-[11px] rounded bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-300 font-medium transition">
+                Safe (1.45)
+              </button>
+              <button id="preset-alert" class="px-2 py-0.5 text-[11px] rounded bg-amber-950/80 hover:bg-amber-900 border border-amber-700/50 text-amber-300 font-medium transition">
+                Alert (1.23)
+              </button>
+              <button id="preset-hedge" class="px-2 py-0.5 text-[11px] rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-700/50 text-rose-300 font-medium transition">
+                Hedge Trigger (1.12)
+              </button>
+            </div>
+          </div>
+
+          <!-- DYNAMIC DOWNGRADE / HEDGE ALERT CARD -->
+          <div id="shield-alert-box" class="mt-3 p-3.5 rounded-xl border transition-all duration-300 bg-gray-950/50 border-gray-800">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span id="shield-badge" class="h-3 w-3 rounded-full bg-emerald-500"></span>
+                <span id="shield-title" class="text-xs font-bold text-gray-300">Position Secured</span>
+              </div>
+              <span id="shield-ratio" class="text-xs font-mono text-gray-400">Hedge: Idle</span>
+            </div>
+            <p id="shield-desc" class="text-xs text-gray-400 mt-1">Health Factor is above 1.20 threshold. No downside hedging required.</p>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-gray-800 text-xs text-gray-500 flex justify-between">
+          <span>SomniaLend Pool: <span class="font-mono text-gray-400">0x7Cb9...176</span></span>
+          <span class="text-cyan-400 font-medium">Automatic IOC Taker</span>
+        </div>
+      </section>
+
+      <!-- PANEL 4: LIVE AGENT TELEMETRY & TRANSACTION FEED (6 Cols) -->
+      <section class="lg:col-span-6 bg-gray-900/60 border border-gray-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 border-b border-gray-800/80">
+            <div class="flex items-center gap-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i>
+              <h2 class="font-semibold text-white">Agent Telemetry & Transaction Feed</h2>
+            </div>
+            <span class="text-xs font-mono text-gray-400">Live Stream</span>
+          </div>
+
+          <!-- Log Console -->
+          <div id="log-container" class="mt-3 bg-gray-950/80 rounded-xl p-3 border border-gray-800/80 font-mono text-xs space-y-2 h-64 overflow-y-auto">
+            <!-- Initial seed events -->
+            <div class="text-gray-400 text-[11px]">[16:51:20] <span class="text-cyan-400 font-semibold">INIT</span> Initializing HedgePulse AI Orchestrator on Shannon Testnet</div>
+            <div class="text-gray-400 text-[11px]">[16:51:22] <span class="text-emerald-400 font-semibold">DISCOVER</span> Active Market: BTC-90000-15M (pool=0x1711...4e11)</div>
+            <div class="text-gray-400 text-[11px]">[16:51:23] <span class="text-purple-400 font-semibold">MINT_SET</span> Complete Set Mint: 2.0 tUSDC -> 2.0 YES + 2.0 NO</div>
+            <div class="text-gray-400 text-[11px]">[16:51:24] <span class="text-cyan-400 font-semibold">POST_ORDER</span> Rested SELL_YES @ 50.9% (Order #1788539262772)</div>
+            <div class="text-gray-400 text-[11px]">[16:51:25] <span class="text-purple-400 font-semibold">POST_ORDER</span> Rested SELL_NO @ 51.0% (Order #1788539262773)</div>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
+          <span class="text-gray-500">Explorer: <a href="https://shannon-explorer.somnia.network" target="_blank" class="text-cyan-400 hover:underline">shannon-explorer.somnia.network</a></span>
+          <button id="btn-clear-logs" class="text-gray-400 hover:text-gray-200">Clear</button>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-gray-800/80 py-4 px-6 text-center text-xs text-gray-500">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+      <span>Built for the <strong>Somnia × DreamDEX Event Contracts Hackathon</strong></span>
+      <span class="font-mono text-cyan-500/80">HedgePulse AI: Continuous Market-Making & Downside Protection</span>
+      <span>EVM Cancun Baseline • EIP-1559 60 gwei</span>
+    </div>
+  </footer>
+
+  <!-- OPERATOR INTERACTIVE CLIENT SCRIPT -->
+  <script>
+    lucide.createIcons();
+
+    // State Variables
+    let spot = 90240.50;
+    const strike = 90000.00;
+    let timeRemainingSec = 828; // 13m 48s
+    let healthFactor = 1.450;
+    let isAgentRunning = true;
+    let cumulativeVol = 14890.00;
+
+    // Elements
+    const hfSlider = document.getElementById('hf-slider');
+    const sliderVal = document.getElementById('slider-hf-val');
+    const metricHf = document.getElementById('metric-hf');
+    const metricHfStatus = document.getElementById('metric-hf-status');
+    const shieldBox = document.getElementById('shield-alert-box');
+    const shieldBadge = document.getElementById('shield-badge');
+    const shieldTitle = document.getElementById('shield-title');
+    const shieldDesc = document.getElementById('shield-desc');
+    const shieldRatio = document.getElementById('shield-ratio');
+    const logContainer = document.getElementById('log-container');
+    const expiryTimer = document.getElementById('expiry-timer');
+    const btnToggleAgent = document.getElementById('btn-toggle-agent');
+    const agentStatusLabel = document.getElementById('agent-status-label');
+
+    // Helper: append log line
+    function addLog(tag, message, colorClass = "text-cyan-400") {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      const div = document.createElement('div');
+      div.className = "text-gray-300 text-[11px] leading-relaxed";
+      div.innerHTML = `<span class="text-gray-500">[${timeStr}]</span> <span class="${colorClass} font-semibold">${tag}</span> ${message}`;
+      logContainer.appendChild(div);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // Update Health Shield visuals based on Health Factor
+    function updateHealthShield(hf) {
+      healthFactor = parseFloat(hf);
+      sliderVal.textContent = healthFactor.toFixed(3);
+      metricHf.textContent = healthFactor.toFixed(3);
+
+      if (healthFactor < 1.15) {
+        // EMERGENCY TIER (< 1.15)
+        metricHf.className = "text-xl font-bold font-mono text-rose-500 mt-1";
+        metricHfStatus.className = "text-[11px] font-semibold text-rose-300 px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-700/60 inline-block mt-0.5";
+        metricHfStatus.textContent = "EMERGENCY (<1.15)";
+        
+        shieldBox.className = "mt-3 p-3.5 rounded-xl border bg-rose-950/40 border-rose-700/80 glow-red transition-all duration-300";
+        shieldBadge.className = "h-3 w-3 rounded-full bg-rose-500 animate-ping";
+        shieldTitle.className = "text-xs font-bold text-rose-400";
+        shieldTitle.textContent = "CRITICAL: EMERGENCY SHIELD ACTIVATED";
+        shieldRatio.className = "text-xs font-mono text-rose-300 font-bold";
+        shieldRatio.textContent = "Hedge: 25 NO @ 55.1%";
+        shieldDesc.innerHTML = `<span class="text-white font-semibold">Immediate Downside Protection Triggered:</span> Purchased 25 BUY_NO contracts ($25.00 max payout) to offset $1,300.00 liquidation impairment.`;
+
+        addLog("IOC_HEDGE", "Emergency Trigger (HF=" + healthFactor.toFixed(2) + "): Bought 25 NO contracts @ 50.1% limit (Tx: 0x" + Math.random().toString(16).slice(2, 10) + ")", "text-rose-400 font-bold");
+      } else if (healthFactor < 1.20) {
+        // HEDGE REQUIRED TIER (1.15 <= HF < 1.20)
+        metricHf.className = "text-xl font-bold font-mono text-amber-400 mt-1";
+        metricHfStatus.className = "text-[11px] font-semibold text-amber-300 px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-700/60 inline-block mt-0.5";
+        metricHfStatus.textContent = "HEDGE REQUIRED (<1.20)";
+
+        shieldBox.className = "mt-3 p-3.5 rounded-xl border bg-amber-950/30 border-amber-700/70 glow-purple transition-all duration-300";
+        shieldBadge.className = "h-3 w-3 rounded-full bg-amber-400 animate-pulse";
+        shieldTitle.className = "text-xs font-bold text-amber-300";
+        shieldTitle.textContent = "SHIELD ACTIVATED: EXECUTING NO HEDGE";
+        shieldRatio.className = "text-xs font-mono text-amber-300";
+        shieldRatio.textContent = "Hedge: 15 NO @ 50.1%";
+        shieldDesc.innerHTML = `Health factor dropped to ${healthFactor.toFixed(2)}. Submitting IOC BUY_NO order to hedge downside risk.`;
+
+        addLog("IOC_HEDGE", "Hedge Triggered (HF=" + healthFactor.toFixed(2) + "): Purchased 15 NO contracts via DreamDEX IOC", "text-amber-400");
+      } else if (healthFactor <= 1.25) {
+        // ALERT TIER (1.20 <= HF <= 1.25)
+        metricHf.className = "text-xl font-bold font-mono text-yellow-400 mt-1";
+        metricHfStatus.className = "text-[11px] font-semibold text-yellow-300 px-1.5 py-0.5 rounded bg-yellow-950/80 border border-yellow-700/60 inline-block mt-0.5";
+        metricHfStatus.textContent = "ALERT (<=1.25)";
+
+        shieldBox.className = "mt-3 p-3.5 rounded-xl border bg-yellow-950/20 border-yellow-700/40 transition-all duration-300";
+        shieldBadge.className = "h-3 w-3 rounded-full bg-yellow-400";
+        shieldTitle.className = "text-xs font-bold text-yellow-300";
+        shieldTitle.textContent = "WARNING: Position Under Observation";
+        shieldRatio.className = "text-xs font-mono text-yellow-400";
+        shieldRatio.textContent = "Monitoring";
+        shieldDesc.innerHTML = `Loan HF approaching hedge boundary (1.20). Order book liquidity armed.`;
+      } else {
+        // SAFE TIER (> 1.25)
+        metricHf.className = "text-xl font-bold font-mono text-emerald-400 mt-1";
+        metricHfStatus.className = "text-[11px] font-semibold text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/50 inline-block mt-0.5";
+        metricHfStatus.textContent = "SAFE (>1.25)";
+
+        shieldBox.className = "mt-3 p-3.5 rounded-xl border bg-gray-950/50 border-gray-800 transition-all duration-300";
+        shieldBadge.className = "h-3 w-3 rounded-full bg-emerald-500";
+        shieldTitle.className = "text-xs font-bold text-gray-300";
+        shieldTitle.textContent = "Position Secured";
+        shieldRatio.className = "text-xs font-mono text-gray-400";
+        shieldRatio.textContent = "Hedge: Idle";
+        shieldDesc.innerHTML = `Health Factor is above 1.20 threshold. No downside hedging required.`;
+      }
+    }
+
+    // Slider listener
+    hfSlider.addEventListener('input', (e) => {
+      updateHealthShield(e.target.value);
+    });
+
+    // Preset buttons
+    document.getElementById('preset-safe').addEventListener('click', () => {
+      hfSlider.value = 1.45;
+      updateHealthShield(1.45);
+    });
+    document.getElementById('preset-alert').addEventListener('click', () => {
+      hfSlider.value = 1.23;
+      updateHealthShield(1.23);
+    });
+    document.getElementById('preset-hedge').addEventListener('click', () => {
+      hfSlider.value = 1.12;
+      updateHealthShield(1.12);
+    });
+
+    // Clear logs
+    document.getElementById('btn-clear-logs').addEventListener('click', () => {
+      logContainer.innerHTML = '';
+    });
+
+    // Toggle Agent
+    btnToggleAgent.addEventListener('click', () => {
+      isAgentRunning = !isAgentRunning;
+      if (isAgentRunning) {
+        btnToggleAgent.className = "bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm shadow-cyan-500/30";
+        agentStatusLabel.textContent = "Agent Active";
+        addLog("AGENT", "Autonomous reactive loop resumed.", "text-emerald-400");
+      } else {
+        btnToggleAgent.className = "bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5";
+        agentStatusLabel.textContent = "Agent Paused";
+        addLog("AGENT", "Quoting loop paused. Active orders maintained.", "text-amber-400");
+      }
+    });
+
+    // Expiry countdown timer ticker
+    setInterval(() => {
+      if (timeRemainingSec > 0) {
+        timeRemainingSec--;
+        const m = Math.floor(timeRemainingSec / 60);
+        const s = timeRemainingSec % 60;
+        expiryTimer.textContent = `${m}m ${s < 10 ? '0' : ''}${s}s`;
+      } else {
+        expiryTimer.textContent = "WINDOW RESOLVED";
+        addLog("SETTLER", "Market window closed. Invoking redeem() to recycle 1:1 collateral...", "text-emerald-400 font-bold");
+        timeRemainingSec = 900; // roll window
+      }
+    }, 1000);
+
+    // Simulated market tick generator
+    setInterval(() => {
+      if (!isAgentRunning) return;
+      
+      // Slight spot jitter (+/- $20)
+      const delta = (Math.random() - 0.49) * 25;
+      spot += delta;
+      document.getElementById('metric-spot').textContent = `$${spot.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      document.getElementById('p1-spot').textContent = `$${spot.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+      // Recalculate Black-Scholes approx
+      const probYes = Math.max(0.05, Math.min(0.95, 0.50 + ((spot - strike) / 1000) * 0.12));
+      const probNo = 1.0 - probYes;
+
+      document.getElementById('metric-pyes').textContent = `${(probYes * 100).toFixed(1)}%`;
+      document.getElementById('prob-yes-val').textContent = `${(probYes * 100).toFixed(1)}%`;
+      document.getElementById('prob-no-val').textContent = `${(probNo * 100).toFixed(1)}%`;
+
+      document.getElementById('bar-yes').style.width = `${(probYes * 100).toFixed(1)}%`;
+      document.getElementById('bar-no').style.width = `${(probNo * 100).toFixed(1)}%`;
+
+      // Order book ladder (180 bps spread)
+      const yesAsk = (probYes + 0.009).toFixed(4);
+      const yesBid = (probYes - 0.009).toFixed(4);
+      const noAsk = (probNo + 0.009).toFixed(4);
+      const noBid = (probNo - 0.009).toFixed(4);
+
+      document.getElementById('ask-yes-px').textContent = `${yesAsk} (${(yesAsk * 100).toFixed(1)}%)`;
+      document.getElementById('ask-no-px').textContent = `${noAsk} (${(noAsk * 100).toFixed(1)}%)`;
+      document.getElementById('bid-yes-px').textContent = `${yesBid} (${(yesBid * 100).toFixed(1)}%)`;
+      document.getElementById('bid-no-px').textContent = `${noBid} (${(noBid * 100).toFixed(1)}%)`;
+
+      cumulativeVol += 4.00;
+      document.getElementById('metric-vol').textContent = `$${cumulativeVol.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+      // Occasional re-quote log
+      if (Math.random() < 0.25) {
+        addLog("POST_ORDER", `Refreshed 180bps quotes: YES Bid=${yesBid} Ask=${yesAsk} | NO Bid=${noBid} Ask=${noAsk}`, "text-cyan-400");
+      }
+    }, 3000);
+  </script>
+</body>
+</html>
