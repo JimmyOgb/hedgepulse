@@ -65,7 +65,11 @@
 
         <!-- Dynamic Connect / Wallet Button -->
         <div class="flex items-center gap-1.5">
-          <button id="btn-wallet" class="bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200">
+          <button id="btn-connect" class="bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200">
+            <span id="wallet-dot" class="hidden relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
             <i data-lucide="wallet" class="w-3.5 h-3.5 text-cyan-400"></i>
             <span id="wallet-label" class="font-semibold">Connect Wallet</span>
           </button>
@@ -711,8 +715,9 @@
     const expiryTimer = document.getElementById('expiry-timer');
     const btnToggleAgent = document.getElementById('btn-toggle-agent');
     const agentStatusLabel = document.getElementById('agent-status-label');
-    const btnWallet = document.getElementById('btn-wallet');
+    const btnWallet = document.getElementById('btn-connect') || document.getElementById('btn-wallet') || document.getElementById('btn-connect-wallet');
     const walletLabel = document.getElementById('wallet-label');
+    const walletDot = document.getElementById('wallet-dot');
     const btnDisconnect = document.getElementById('btn-disconnect');
     const balUsdcEl = document.getElementById('bal-usdc');
     const balSttEl = document.getElementById('bal-stt');
@@ -938,6 +943,166 @@
       } catch (err) {
         console.warn("Balance refresh warning:", err.message);
       }
+    }
+
+    // Network Switching & Verification for Somnia Shannon (50312 / 0xc488)
+    async function ensureSomniaNetwork() {
+      if (!window.ethereum) {
+        showToast("No Web3 wallet detected. Please install MetaMask or Rabby.", "error");
+        return false;
+      }
+
+      try {
+        const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
+        if (parseInt(currentChainId, 16) === SHANNON_CHAIN_ID || currentChainId.toLowerCase() === SHANNON_HEX_CHAIN_ID.toLowerCase()) {
+          return true;
+        }
+
+        try {
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: SHANNON_HEX_CHAIN_ID }]
+          });
+          return true;
+        } catch (switchError) {
+          const isUnrecognized =
+            switchError.code === 4902 ||
+            switchError?.cause?.code === 4902 ||
+            switchError?.data?.originalError?.code === 4902 ||
+            (switchError.message && (
+              switchError.message.includes("4902") ||
+              switchError.message.toLowerCase().includes("unrecognized chain") ||
+              switchError.message.includes("wallet_addEthereumChain")
+            ));
+
+          if (isUnrecognized) {
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [{
+                chainId: SHANNON_HEX_CHAIN_ID,
+                chainName: "Somnia Shannon Testnet",
+                nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
+                rpcUrls: [OFFICIAL_SHANNON_RPC, FALLBACK_RPC, BACKUP_RPC],
+                blockExplorerUrls: [EXPLORER_URL]
+              }]
+            });
+            return true;
+          }
+          throw switchError;
+        }
+      } catch (err) {
+        if (isUserRejected(err)) {
+          showToast("Network switch to Somnia Shannon was cancelled by user.", "warning");
+          addLog("NETWORK", "Network switch cancelled by user.", "text-amber-400");
+        } else {
+          showToast("Failed to switch to Somnia Shannon network: " + (err.shortMessage || err.message), "error");
+          addLog("NETWORK", `Network switch error: ${err.message}`, "text-rose-400");
+        }
+        return false;
+      }
+    }
+
+    async function verifySomniaNetworkGuard() {
+      if (!window.ethereum) throw new Error("No Web3 wallet detected. Please install MetaMask or Rabby.");
+      const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
+      if (parseInt(currentChainId, 16) !== SHANNON_CHAIN_ID && currentChainId.toLowerCase() !== SHANNON_HEX_CHAIN_ID.toLowerCase()) {
+        addLog("NETWORK", "Wrong network detected. Prompting switch to Somnia Shannon (50312)...", "text-amber-400");
+        const switched = await ensureSomniaNetwork();
+        if (!switched) {
+          throw new Error("Action halted: Somnia Shannon network (50312) required.");
+        }
+      }
+    }
+
+    // Robust Connect Wallet Implementation
+    async function connectWallet() {
+      if (typeof window.ethereum === "undefined") {
+        showToast("No Web3 wallet detected. Please install MetaMask or Rabby.", "error");
+        addLog("WALLET", "No Web3 wallet detected. Please install MetaMask or Rabby.", "text-rose-400");
+        return;
+      }
+
+      const walletLabelEl = document.getElementById('wallet-label');
+      const walletDotEl = document.getElementById('wallet-dot');
+      const btnWalletEl = document.getElementById('btn-connect') || document.getElementById('btn-wallet') || document.getElementById('btn-connect-wallet');
+      const btnDisconnectEl = document.getElementById('btn-disconnect');
+
+      try {
+        if (walletLabelEl) walletLabelEl.textContent = "Connecting...";
+
+        // 1. Request accounts
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (!accounts || accounts.length === 0) {
+          throw new Error("No accounts authorized.");
+        }
+        userAddress = accounts[0];
+
+        // 2. Verify Somnia Shannon network (0xc488 / 50312)
+        await ensureSomniaNetwork();
+
+        walletClient = createWalletClient({
+          chain: somniaShannonChain,
+          transport: custom(window.ethereum)
+        });
+
+        // 3. Update UI immediately: change button text to truncated address, show green connected dot
+        if (walletLabelEl) walletLabelEl.textContent = truncateAddress(userAddress);
+        if (walletDotEl) walletDotEl.classList.remove('hidden');
+        if (btnWalletEl) {
+          btnWalletEl.classList.remove('glow-pulse');
+          btnWalletEl.classList.add('border-emerald-500/50');
+        }
+        if (btnDisconnectEl) btnDisconnectEl.classList.remove('hidden');
+
+        addLog("WALLET", `Connected to ${truncateAddress(userAddress)} on Somnia Shannon (50312)`, "text-emerald-400 font-bold");
+        showToast(`Wallet connected: ${truncateAddress(userAddress)}`, "success");
+
+        // 4. Query balances
+        await refreshBalances();
+      } catch (err) {
+        const errCode = err?.code ?? err?.cause?.code ?? err?.data?.originalError?.code;
+        const errMsg = err?.message || String(err);
+
+        // Catch MetaMask Error -32002 (Request already pending)
+        if (errCode === -32002 || errMsg.includes("-32002") || errMsg.toLowerCase().includes("already pending")) {
+          const pendingMsg = "Connection request already open in MetaMask. Please open your MetaMask extension icon to approve.";
+          showToast(pendingMsg, "warning");
+          addLog("WALLET", pendingMsg, "text-amber-400 font-bold");
+          if (walletLabelEl && !userAddress) walletLabelEl.textContent = "Connect Wallet";
+        } else if (errCode === 4001 || isUserRejected(err)) {
+          // Catch User Rejection (Error 4001): reset button state cleanly without console errors
+          if (walletLabelEl && !userAddress) walletLabelEl.textContent = "Connect Wallet";
+          if (walletDotEl && !userAddress) walletDotEl.classList.add('hidden');
+          if (btnDisconnectEl && !userAddress) btnDisconnectEl.classList.add('hidden');
+          addLog("WALLET", "Wallet connection request cancelled by user.", "text-gray-400");
+        } else {
+          console.error("Wallet connection error:", err);
+          if (walletLabelEl && !userAddress) walletLabelEl.textContent = "Connect Wallet";
+          showToast("Wallet connection failed: " + (err.shortMessage || err.message), "error");
+          addLog("WALLET", `Connection error: ${err.message}`, "text-rose-400");
+        }
+      }
+    }
+
+    function disconnectWallet() {
+      userAddress = null;
+      walletClient = null;
+      const walletLabelEl = document.getElementById('wallet-label');
+      const walletDotEl = document.getElementById('wallet-dot');
+      const btnWalletEl = document.getElementById('btn-connect') || document.getElementById('btn-wallet') || document.getElementById('btn-connect-wallet');
+      const btnDisconnectEl = document.getElementById('btn-disconnect');
+
+      if (walletLabelEl) walletLabelEl.textContent = "Connect Wallet";
+      if (walletDotEl) walletDotEl.classList.add('hidden');
+      if (btnWalletEl) {
+        btnWalletEl.classList.add('glow-pulse');
+        btnWalletEl.classList.remove('border-emerald-500/50');
+      }
+      if (btnDisconnectEl) btnDisconnectEl.classList.add('hidden');
+      balUsdcEl.textContent = "0.00";
+      balSttEl.textContent = "0.000";
+      hideFaucetBanner();
+      addLog("WALLET", "Wallet disconnected.", "text-gray-400");
     }
 
     // Action A: Mint Complete Set (1 tUSDC -> 1 YES + 1 NO)
@@ -1378,10 +1543,37 @@
     }, 3000);
 
     // Event Listeners for Web3 Actions & Judge Sandbox Controls
-    btnWallet.addEventListener('click', connectWallet);
-    btnDisconnect.addEventListener('click', disconnectWallet);
-    btnMintSet.addEventListener('click', handleMintSet);
-    btnLiveHedge.addEventListener('click', handleDownsideHedge);
+    if (btnWallet) btnWallet.addEventListener('click', connectWallet);
+    if (btnDisconnect) btnDisconnect.addEventListener('click', disconnectWallet);
+    if (btnMintSet) btnMintSet.addEventListener('click', handleMintSet);
+    if (btnLiveHedge) btnLiveHedge.addEventListener('click', handleDownsideHedge);
+
+    // Bulletproof Window Binding & Event Listeners across all browsers
+    function attachWalletListeners() {
+      const connectButtonSelectors = ['#btn-connect', '#btn-connect-wallet', '#btn-wallet'];
+      connectButtonSelectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(btn => {
+          btn.removeEventListener('click', connectWallet);
+          btn.addEventListener('click', connectWallet);
+        });
+      });
+
+      // Header connect buttons
+      document.querySelectorAll('header button').forEach(btn => {
+        const text = btn.textContent || '';
+        const id = btn.id || '';
+        if (id.includes('wallet') || id.includes('connect') || text.includes('Connect Wallet')) {
+          btn.removeEventListener('click', connectWallet);
+          btn.addEventListener('click', connectWallet);
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attachWalletListeners);
+    } else {
+      attachWalletListeners();
+    }
 
     const btnDiscoverPools = document.getElementById('btn-discover-pools');
     if (btnDiscoverPools) {
@@ -1407,7 +1599,9 @@
       });
     }
 
-    // Expose helpers globally for console / testing / judges
+    // Expose helpers globally for console / testing / judges / automation
+    window.connectWallet = connectWallet;
+    window.disconnectWallet = disconnectWallet;
     window.ensureSomniaNetwork = ensureSomniaNetwork;
     window.ensureShannonNetwork = ensureSomniaNetwork;
     window.handleMintSet = handleMintSet;
@@ -1424,19 +1618,26 @@
     // Initial pool discovery on startup
     refreshActiveMarketPool();
 
-    // Auto-reconnect if window.ethereum has authorized accounts
-    if (window.ethereum) {
-      window.ethereum.on?.('accountsChanged', (accounts) => {
-        if (!accounts || accounts.length === 0) disconnectWallet();
-        else {
+    // Account & Network Change Listeners (EIP-1193)
+    if (typeof window.ethereum !== 'undefined' && window.ethereum?.on) {
+      window.ethereum.on('accountsChanged', (accounts) => {
+        if (!accounts || accounts.length === 0) {
+          disconnectWallet();
+        } else {
           userAddress = accounts[0];
-          walletLabel.textContent = truncateAddress(userAddress);
+          const walletLabelEl = document.getElementById('wallet-label');
+          const walletDotEl = document.getElementById('wallet-dot');
+          const btnDisconnectEl = document.getElementById('btn-disconnect');
+          if (walletLabelEl) walletLabelEl.textContent = truncateAddress(userAddress);
+          if (walletDotEl) walletDotEl.classList.remove('hidden');
+          if (btnDisconnectEl) btnDisconnectEl.classList.remove('hidden');
           refreshBalances();
+          addLog("WALLET", `Switched active account to ${truncateAddress(userAddress)}`, "text-cyan-400");
         }
       });
 
-      window.ethereum.on?.('chainChanged', () => {
-        refreshBalances();
+      window.ethereum.on('chainChanged', () => {
+        window.location.reload();
       });
     }
   </script>
