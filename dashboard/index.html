@@ -488,23 +488,43 @@
     const SHANNON_CHAIN_ID = 50312;
     const SHANNON_HEX_CHAIN_ID = "0xc488";
     const RPC_URL = "https://dream-rpc.somnia.network";
-    const EXPLORER_URL = "https://shannon-explorer.somnia.network";
+    const RPC_URLS = [
+      "https://dream-rpc.somnia.network",
+      "https://api.infra.testnet.somnia.network/"
+    ];
+    const EXPLORER_URL = "https://shannon-explorer.somnia.network/";
     const POOL_ADDRESS = "0x171186a2a8d237ad194dd3cae9b05326407c4e11";
     const COLLATERAL_ADDRESS = "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E"; // tUSDC
 
     const somniaShannonChain = {
       id: SHANNON_CHAIN_ID,
       name: "Somnia Shannon Testnet",
-      nativeCurrency: { name: "STT", symbol: "STT", decimals: 18 },
+      nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
       rpcUrls: {
-        default: { http: [RPC_URL] },
-        public: { http: [RPC_URL] }
+        default: { http: RPC_URLS },
+        public: { http: RPC_URLS }
       },
       blockExplorers: {
         default: { name: "Somnia Explorer", url: EXPLORER_URL }
       },
       testnet: true
     };
+
+    // Helper: Detect user rejection from MetaMask / viem
+    function isUserRejected(err) {
+      if (!err) return false;
+      const code = err.code ?? err?.cause?.code ?? err?.data?.originalError?.code;
+      if (code === 4001 || code === "ACTION_REJECTED") return true;
+      if (err.name === "UserRejectedRequestError" || err?.cause?.name === "UserRejectedRequestError") return true;
+      const str = (err.shortMessage || err.message || String(err)).toLowerCase();
+      return (
+        str.includes("user rejected") ||
+        str.includes("user denied") ||
+        str.includes("rejected the request") ||
+        str.includes("user cancelled") ||
+        str.includes("user canceled")
+      );
+    }
 
     const ERC20_ABI = parseAbi([
       "function balanceOf(address owner) view returns (uint256)",
@@ -607,7 +627,7 @@
     }
 
     // Switch or Add Shannon Testnet to Wallet
-    async function ensureShannonNetwork() {
+    async function ensureSomniaNetwork() {
       if (!window.ethereum) throw new Error("No browser Web3 wallet detected");
 
       try {
@@ -616,20 +636,56 @@
           params: [{ chainId: SHANNON_HEX_CHAIN_ID }]
         });
       } catch (switchError) {
-        if (switchError.code === 4902 || switchError?.data?.originalError?.code === 4902) {
+        const errMsg = switchError?.message || "";
+        const errCode = switchError?.code ?? switchError?.data?.originalError?.code ?? switchError?.cause?.code;
+        const errStr = String(switchError);
+
+        const isUnrecognized =
+          errCode === 4902 ||
+          errMsg.includes("Unrecognized chain ID") ||
+          errMsg.includes("wallet_addEthereumChain") ||
+          errStr.includes("4902") ||
+          errStr.includes("Unrecognized chain ID") ||
+          errStr.includes("wallet_addEthereumChain");
+
+        if (isUnrecognized) {
           await window.ethereum.request({
             method: "wallet_addEthereumChain",
             params: [{
               chainId: SHANNON_HEX_CHAIN_ID,
               chainName: "Somnia Shannon Testnet",
-              nativeCurrency: { name: "STT", symbol: "STT", decimals: 18 },
-              rpcUrls: [RPC_URL],
-              blockExplorerUrls: [EXPLORER_URL]
+              nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
+              rpcUrls: [
+                "https://dream-rpc.somnia.network",
+                "https://api.infra.testnet.somnia.network/"
+              ],
+              blockExplorerUrls: ["https://shannon-explorer.somnia.network/"]
             }]
           });
         } else {
           throw switchError;
         }
+      }
+
+      const activeChainHex = await window.ethereum.request({ method: "eth_chainId" });
+      if (!activeChainHex || parseInt(activeChainHex, 16) !== SHANNON_CHAIN_ID) {
+        throw new Error("Somnia Shannon Testnet (50312) network switch required");
+      }
+      return true;
+    }
+    const ensureShannonNetwork = ensureSomniaNetwork;
+
+    // Strict Guard: Verify Shannon Network (50312) before any contract call
+    async function verifySomniaNetworkGuard() {
+      if (!window.ethereum) throw new Error("No browser Web3 wallet detected");
+      const currentChainHex = await window.ethereum.request({ method: "eth_chainId" });
+      if (!currentChainHex || parseInt(currentChainHex, 16) !== SHANNON_CHAIN_ID) {
+        addLog("NETWORK", "Wallet is not on Somnia Shannon Testnet. Requesting network switch...", "text-amber-400");
+        await ensureSomniaNetwork();
+      }
+      const verifiedChainHex = await window.ethereum.request({ method: "eth_chainId" });
+      if (!verifiedChainHex || parseInt(verifiedChainHex, 16) !== SHANNON_CHAIN_ID) {
+        throw new Error("Execution halted: Somnia Shannon Testnet (50312) is required.");
       }
     }
 
@@ -645,7 +701,7 @@
         btnWallet.disabled = true;
         walletLabel.textContent = "Connecting...";
 
-        await ensureShannonNetwork();
+        await ensureSomniaNetwork();
 
         walletClient = createWalletClient({
           chain: somniaShannonChain,
@@ -664,7 +720,11 @@
         }
       } catch (err) {
         console.error("Wallet connection error:", err);
-        addLog("WALLET", `Connection failed: ${err.message}`, "text-rose-400");
+        if (isUserRejected(err)) {
+          addLog("[INFO]", "Transaction cancelled by user.", "text-amber-400");
+        } else {
+          addLog("WALLET", `Connection failed: ${err.message}`, "text-rose-400");
+        }
         walletLabel.textContent = "Connect Wallet";
         btnWallet.className = "bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200";
       } finally {
@@ -687,20 +747,35 @@
 
     // Action A: Mint Complete Set on DreamDEX Pool
     async function handleMintSet() {
-      if (!userAddress || !walletClient) {
-        await connectWallet();
-        if (!userAddress) return;
+      if (!window.ethereum) {
+        alert("No Web3 wallet (MetaMask / Rabby) detected in your browser.");
+        addLog("WALLET", "No Web3 provider detected in browser.", "text-amber-400");
+        return;
       }
 
       try {
         btnMintSet.disabled = true;
-        btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Approving & Minting...`;
+        btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Preparing Mint...`;
+
+        if (!userAddress || !walletClient) {
+          await connectWallet();
+          if (!userAddress) return;
+        }
+
+        // Strict guard before any contract call: if current chain is not 50312, trigger ensureSomniaNetwork() and halt execution until accepted
+        await verifySomniaNetworkGuard();
+
+        walletClient = createWalletClient({
+          chain: somniaShannonChain,
+          transport: custom(window.ethereum)
+        });
 
         addLog("MINT_SET", "Initiating Complete-Set Mint: 1.0 tUSDC &rarr; 1.0 YES + 1.0 NO...", "text-purple-400 font-semibold");
 
         const mintAmount = 1_000_000n; // 1 tUSDC (6 decimals)
+        const maxUint256 = 2n ** 256n - 1n;
 
-        // 1. Check & Approve Allowance
+        // 1. Inspect allowance of tUSDC (0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E) for DreamDEX pool (0x171186a2a8d237ad194dd3cae9b05326407c4e11)
         const allowance = await publicClient.readContract({
           address: COLLATERAL_ADDRESS,
           abi: ERC20_ABI,
@@ -708,21 +783,25 @@
           args: [userAddress, POOL_ADDRESS]
         });
 
+        // If allowance < 1_000_000 (1 tUSDC), prompt tUSDC.approve(poolAddress, maxUint256) first and wait for confirmation
         if (allowance < mintAmount) {
-          addLog("APPROVE", `Approving DreamDEX Pool (${truncateAddress(POOL_ADDRESS)}) for tUSDC collateral...`, "text-cyan-400");
+          btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Approving tUSDC...`;
+          addLog("APPROVE", `Allowance insufficient (< 1.0 tUSDC). Approving DreamDEX Pool (${truncateAddress(POOL_ADDRESS)}) for tUSDC collateral...`, "text-cyan-400");
           const approveHash = await walletClient.writeContract({
             address: COLLATERAL_ADDRESS,
             abi: ERC20_ABI,
             functionName: "approve",
-            args: [POOL_ADDRESS, 2n ** 256n - 1n],
+            args: [POOL_ADDRESS, maxUint256],
             account: userAddress
           });
-          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}/tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>`, "text-cyan-400");
+          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}/tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>. Waiting for confirmation...`, "text-cyan-400");
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          addLog("APPROVE", "Approval confirmed on-chain.", "text-emerald-400");
         }
 
-        // 2. Execute mintSet on pool
-        addLog("MINT_SET", `Submitting mintSet(1 tUSDC) on pool ${truncateAddress(POOL_ADDRESS)}...`, "text-purple-400");
+        // 2. Once approved, proceed to call pool.mintSet(userAddress, userAddress, 1000000)
+        btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Minting Complete Set...`;
+        addLog("MINT_SET", `Submitting mintSet(1000000) on pool ${truncateAddress(POOL_ADDRESS)}...`, "text-purple-400");
         const mintHash = await walletClient.writeContract({
           address: POOL_ADDRESS,
           abi: BINARY_POOL_ABI,
@@ -731,12 +810,19 @@
           account: userAddress
         });
 
-        addLog("MINT_SET", `Mint confirmed on-chain! Tx: <a href="${EXPLORER_URL}/tx/${mintHash}" target="_blank" class="text-emerald-400 underline font-mono font-bold">${truncateAddress(mintHash)}</a>`, "text-emerald-400");
+        addLog("MINT_SET", `Mint submitted! Tx: <a href="${EXPLORER_URL}/tx/${mintHash}" target="_blank" class="text-purple-300 underline font-mono">${truncateAddress(mintHash)}</a>. Waiting for confirmation...`, "text-purple-400");
+        await publicClient.waitForTransactionReceipt({ hash: mintHash });
+
+        addLog("MINT_SET", `Mint confirmed on-chain! Tx: <a href="${EXPLORER_URL}/tx/${mintHash}" target="_blank" class="text-emerald-400 underline font-mono font-bold">${truncateAddress(mintHash)}</a>`, "text-emerald-400 font-bold");
         
         await refreshBalances();
       } catch (err) {
         console.error("MintSet error:", err);
-        addLog("MINT_SET", `Execution failed or rejected: ${err.shortMessage || err.message}`, "text-rose-400");
+        if (isUserRejected(err)) {
+          addLog("[INFO]", "Transaction cancelled by user.", "text-amber-400");
+        } else {
+          addLog("MINT_SET", `Execution failed or rejected: ${err.shortMessage || err.message}`, "text-rose-400");
+        }
       } finally {
         btnMintSet.disabled = false;
         btnMintSet.innerHTML = `<i data-lucide="layers" class="w-4 h-4"></i><span>Mint 1 Complete Set (1 tUSDC &rarr; 1 YES + 1 NO)</span>`;
@@ -745,20 +831,35 @@
     }
 
     // Action B: Execute Downside Hedge (BUY_NO)
-    async function handleLiveHedge() {
-      if (!userAddress || !walletClient) {
-        await connectWallet();
-        if (!userAddress) return;
+    async function handleDownsideHedge() {
+      if (!window.ethereum) {
+        alert("No Web3 wallet (MetaMask / Rabby) detected in your browser.");
+        addLog("WALLET", "No Web3 provider detected in browser.", "text-amber-400");
+        return;
       }
 
       try {
         btnLiveHedge.disabled = true;
-        btnLiveHedge.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Executing Hedge Order...`;
+        btnLiveHedge.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Preparing Hedge Order...`;
+
+        if (!userAddress || !walletClient) {
+          await connectWallet();
+          if (!userAddress) return;
+        }
+
+        // Strict guard before any contract call: if current chain is not 50312, trigger ensureSomniaNetwork() and halt execution until accepted
+        await verifySomniaNetworkGuard();
+
+        walletClient = createWalletClient({
+          chain: somniaShannonChain,
+          transport: custom(window.ethereum)
+        });
 
         addLog("IOC_HEDGE", `[JUDGE ACTION] Submitting Downside Hedge Order (BUY_NO) for 1 contract...`, "text-rose-400 font-bold");
 
         const hedgePrice = 520_000n; // 0.52 USDC limit (52%)
         const hedgeQuantity = 1_000_000n; // 1 contract (1e6)
+        const maxUint256 = 2n ** 256n - 1n;
 
         const poolExpiryNs = await publicClient.readContract({
           address: POOL_ADDRESS,
@@ -766,6 +867,7 @@
           functionName: "marketExpiryNs"
         }).catch(() => BigInt(Math.floor(Date.now() / 1000) + 900) * 1_000_000_000n);
 
+        // Inspect allowance of tUSDC for DreamDEX pool
         const allowance = await publicClient.readContract({
           address: COLLATERAL_ADDRESS,
           abi: ERC20_ABI,
@@ -774,17 +876,21 @@
         });
 
         if (allowance < hedgeQuantity) {
+          btnLiveHedge.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Approving Collateral...`;
           addLog("APPROVE", `Approving pool router for downside hedge collateral...`, "text-cyan-400");
           const approveHash = await walletClient.writeContract({
             address: COLLATERAL_ADDRESS,
             abi: ERC20_ABI,
             functionName: "approve",
-            args: [POOL_ADDRESS, 2n ** 256n - 1n],
+            args: [POOL_ADDRESS, maxUint256],
             account: userAddress
           });
+          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}/tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>. Waiting for confirmation...`, "text-cyan-400");
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          addLog("APPROVE", "Approval confirmed on-chain.", "text-emerald-400");
         }
 
+        btnLiveHedge.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Placing Hedge Order...`;
         const txHash = await walletClient.writeContract({
           address: POOL_ADDRESS,
           abi: BINARY_POOL_ABI,
@@ -803,17 +909,25 @@
           account: userAddress
         });
 
-        addLog("IOC_HEDGE", `Downside Hedge Order placed! Tx: <a href="${EXPLORER_URL}/tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>`, "text-emerald-400 font-bold");
+        addLog("IOC_HEDGE", `Downside Hedge Order submitted! Tx: <a href="${EXPLORER_URL}/tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>. Waiting for confirmation...`, "text-purple-400");
+        await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+        addLog("IOC_HEDGE", `Downside Hedge Order placed & confirmed! Tx: <a href="${EXPLORER_URL}/tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>`, "text-emerald-400 font-bold");
         await refreshBalances();
       } catch (err) {
         console.error("Downside Hedge error:", err);
-        addLog("IOC_HEDGE", `Hedge placement failed: ${err.shortMessage || err.message}`, "text-rose-400");
+        if (isUserRejected(err)) {
+          addLog("[INFO]", "Transaction cancelled by user.", "text-amber-400");
+        } else {
+          addLog("IOC_HEDGE", `Hedge placement failed: ${err.shortMessage || err.message}`, "text-rose-400");
+        }
       } finally {
         btnLiveHedge.disabled = false;
         btnLiveHedge.innerHTML = `<i data-lucide="shield-alert" class="w-4 h-4"></i><span>Execute Live Downside Hedge (IOC BUY_NO on Shannon)</span>`;
         lucide.createIcons();
       }
     }
+    const handleLiveHedge = handleDownsideHedge;
 
     // Update Health Shield visuals based on Health Factor
     function updateHealthShield(hf) {
@@ -983,7 +1097,14 @@
     btnWallet.addEventListener('click', connectWallet);
     btnDisconnect.addEventListener('click', disconnectWallet);
     btnMintSet.addEventListener('click', handleMintSet);
-    btnLiveHedge.addEventListener('click', handleLiveHedge);
+    btnLiveHedge.addEventListener('click', handleDownsideHedge);
+
+    // Expose helpers globally for console / testing
+    window.ensureSomniaNetwork = ensureSomniaNetwork;
+    window.ensureShannonNetwork = ensureSomniaNetwork;
+    window.handleMintSet = handleMintSet;
+    window.handleDownsideHedge = handleDownsideHedge;
+    window.handleLiveHedge = handleDownsideHedge;
 
     // Auto-reconnect if window.ethereum has authorized accounts
     if (window.ethereum) {
