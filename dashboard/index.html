@@ -18,6 +18,11 @@
     .glow-purple { box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.3); }
     .glow-red { box-shadow: 0 0 20px -5px rgba(239, 68, 68, 0.4); }
     .glow-green { box-shadow: 0 0 20px -5px rgba(34, 197, 94, 0.3); }
+    .glow-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; border-color: rgba(6, 182, 212, 0.8); }
+      50% { opacity: .7; border-color: rgba(6, 182, 212, 0.2); }
+    }
     /* Custom scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #111827; }
@@ -58,15 +63,21 @@
           <span class="text-gray-500 font-mono">50312</span>
         </div>
 
-        <div class="bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-lg flex items-center gap-2 font-mono text-gray-300">
-          <i data-lucide="wallet" class="w-3.5 h-3.5 text-cyan-400"></i>
-          <span title="0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A">0x19E7...ff2A</span>
+        <!-- Dynamic Connect / Wallet Button -->
+        <div class="flex items-center gap-1.5">
+          <button id="btn-wallet" class="bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200">
+            <i data-lucide="wallet" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span id="wallet-label" class="font-semibold">Connect Wallet</span>
+          </button>
+          <button id="btn-disconnect" class="hidden text-gray-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-gray-900/80 transition" title="Disconnect Wallet">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
 
         <div class="bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-lg flex items-center gap-3">
           <span class="text-gray-400">tUSDC: <strong class="text-white font-mono font-semibold" id="bal-usdc">486.00</strong></span>
           <span class="text-gray-600">|</span>
-          <span class="text-gray-400">STT: <strong class="text-cyan-400 font-mono font-semibold" id="bal-stt">1.50</strong></span>
+          <span class="text-gray-400">STT: <strong class="text-cyan-400 font-mono font-semibold" id="bal-stt">1.500</strong></span>
           <span class="text-gray-600">|</span>
           <span class="text-gray-400">Gas: <strong class="text-emerald-400 font-mono" id="gas-fee">6.0 gwei</strong></span>
         </div>
@@ -79,6 +90,21 @@
 
     </div>
   </header>
+
+  <!-- FAUCET WARNING BANNER (Hidden unless balances low) -->
+  <div id="faucet-banner" class="hidden bg-amber-950/40 border-b border-amber-800/60 px-6 py-2 text-xs text-amber-300">
+    <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-2">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+        <span><strong>Low Testnet Balance:</strong> Need testnet tokens to test live on Somnia Shannon?</span>
+      </div>
+      <div class="flex items-center gap-4 text-xs">
+        <a href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" class="text-amber-400 hover:text-amber-200 underline font-semibold flex items-center gap-1">
+          Claim STT Gas &amp; tUSDC from Faucet <i data-lucide="external-link" class="w-3 h-3"></i>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- MAIN OPERATOR COCKPIT BODY -->
   <main class="max-w-7xl mx-auto p-6 space-y-6 flex-1 w-full">
@@ -127,6 +153,29 @@
         <div class="p-2.5 bg-gray-800/60 rounded-lg text-purple-400 border border-gray-700/50">
           <i data-lucide="repeat" class="w-5 h-5"></i>
         </div>
+      </div>
+    </div>
+
+    <!-- JUDGE ON-CHAIN INTERACTION SANDBOX BAR -->
+    <div class="bg-gradient-to-r from-gray-900 via-indigo-950/40 to-gray-900 border border-cyan-500/30 rounded-2xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+          <i data-lucide="zap" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-white text-sm">Judge Testnet Sandbox</h3>
+            <span class="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded-full font-semibold">Live On-Chain Execution</span>
+          </div>
+          <p class="text-xs text-gray-400">Connect MetaMask or Rabby on Shannon Testnet to execute real contract calls directly from the cockpit.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        <button id="btn-mint-set" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-md shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i data-lucide="layers" class="w-4 h-4"></i>
+          <span>Mint 1 Complete Set (1 tUSDC &rarr; 1 YES + 1 NO)</span>
+        </button>
       </div>
     </div>
 
@@ -362,6 +411,14 @@
               <span id="shield-ratio" class="text-xs font-mono text-gray-400">Hedge: Idle</span>
             </div>
             <p id="shield-desc" class="text-xs text-gray-400 mt-1">Health Factor is above 1.20 threshold. No downside hedging required.</p>
+            
+            <!-- Dynamic Interactive Live On-Chain Action Button -->
+            <div id="shield-action-container" class="mt-3 hidden pt-3 border-t border-rose-800/40">
+              <button id="btn-live-hedge" class="w-full bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-rose-900/40 disabled:opacity-50">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                <span>Execute Live Downside Hedge (IOC BUY_NO on Shannon)</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -412,9 +469,63 @@
     </div>
   </footer>
 
-  <!-- OPERATOR INTERACTIVE CLIENT SCRIPT -->
-  <script>
+  <!-- OPERATOR INTERACTIVE CLIENT SCRIPT WITH VIEM WEB3 INTEGRATION -->
+  <script type="module">
+    import {
+      createPublicClient,
+      createWalletClient,
+      custom,
+      http,
+      parseUnits,
+      formatUnits,
+      formatEther,
+      parseAbi
+    } from "https://esm.sh/viem@2.21.0";
+
     lucide.createIcons();
+
+    // Constant Addresses & Chain Specs
+    const SHANNON_CHAIN_ID = 50312;
+    const SHANNON_HEX_CHAIN_ID = "0xc488";
+    const RPC_URL = "https://dream-rpc.somnia.network";
+    const EXPLORER_URL = "https://shannon-explorer.somnia.network";
+    const POOL_ADDRESS = "0x171186a2a8d237ad194dd3cae9b05326407c4e11";
+    const COLLATERAL_ADDRESS = "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E"; // tUSDC
+
+    const somniaShannonChain = {
+      id: SHANNON_CHAIN_ID,
+      name: "Somnia Shannon Testnet",
+      nativeCurrency: { name: "STT", symbol: "STT", decimals: 18 },
+      rpcUrls: {
+        default: { http: [RPC_URL] },
+        public: { http: [RPC_URL] }
+      },
+      blockExplorers: {
+        default: { name: "Somnia Explorer", url: EXPLORER_URL }
+      },
+      testnet: true
+    };
+
+    const ERC20_ABI = parseAbi([
+      "function balanceOf(address owner) view returns (uint256)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function approve(address spender, uint256 amount) returns (bool)"
+    ]);
+
+    const BINARY_POOL_ABI = parseAbi([
+      "function mintSet(address yesTo, address noTo, uint256 amount) external",
+      "function placeBinaryOrder(uint8 kind, uint256 price, uint256 quantity, uint64 expireTimestampNs, uint8 orderType, uint8 selfMatchingOption, address builder, uint96 builderFeeBpsTimes1k, uint64 userData) payable returns (bool success, uint128 id)",
+      "function marketExpiryNs() external view returns (uint64)"
+    ]);
+
+    // Public Read Client (fallback to RPC if no wallet)
+    let publicClient = createPublicClient({
+      chain: somniaShannonChain,
+      transport: http(RPC_URL)
+    });
+
+    let walletClient = null;
+    let userAddress = null;
 
     // State Variables
     let spot = 90240.50;
@@ -434,10 +545,19 @@
     const shieldTitle = document.getElementById('shield-title');
     const shieldDesc = document.getElementById('shield-desc');
     const shieldRatio = document.getElementById('shield-ratio');
+    const shieldActionContainer = document.getElementById('shield-action-container');
+    const btnLiveHedge = document.getElementById('btn-live-hedge');
     const logContainer = document.getElementById('log-container');
     const expiryTimer = document.getElementById('expiry-timer');
     const btnToggleAgent = document.getElementById('btn-toggle-agent');
     const agentStatusLabel = document.getElementById('agent-status-label');
+    const btnWallet = document.getElementById('btn-wallet');
+    const walletLabel = document.getElementById('wallet-label');
+    const btnDisconnect = document.getElementById('btn-disconnect');
+    const balUsdcEl = document.getElementById('bal-usdc');
+    const balSttEl = document.getElementById('bal-stt');
+    const faucetBanner = document.getElementById('faucet-banner');
+    const btnMintSet = document.getElementById('btn-mint-set');
 
     // Helper: append log line
     function addLog(tag, message, colorClass = "text-cyan-400") {
@@ -448,6 +568,251 @@
       div.innerHTML = `<span class="text-gray-500">[${timeStr}]</span> <span class="${colorClass} font-semibold">${tag}</span> ${message}`;
       logContainer.appendChild(div);
       logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function truncateAddress(addr) {
+      if (!addr) return "";
+      return addr.slice(0, 6) + "..." + addr.slice(-4);
+    }
+
+    // Refresh live on-chain balances
+    async function refreshBalances() {
+      if (!userAddress) return;
+      try {
+        const [sttBal, usdcBal] = await Promise.all([
+          publicClient.getBalance({ address: userAddress }).catch(() => 0n),
+          publicClient.readContract({
+            address: COLLATERAL_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "balanceOf",
+            args: [userAddress]
+          }).catch(() => 0n)
+        ]);
+
+        const formattedStt = parseFloat(formatEther(sttBal)).toFixed(3);
+        const formattedUsdc = parseFloat(formatUnits(usdcBal, 6)).toFixed(2);
+
+        balSttEl.textContent = formattedUsdc ? formattedUsdc : "0.00";
+        balUsdcEl.textContent = formattedUsdc;
+        balSttEl.textContent = formattedStt;
+
+        if (parseFloat(formattedStt) < 0.05 || parseFloat(formattedUsdc) === 0) {
+          faucetBanner.classList.remove('hidden');
+        } else {
+          faucetBanner.classList.add('hidden');
+        }
+      } catch (err) {
+        console.warn("Balance refresh warning:", err.message);
+      }
+    }
+
+    // Switch or Add Shannon Testnet to Wallet
+    async function ensureShannonNetwork() {
+      if (!window.ethereum) throw new Error("No browser Web3 wallet detected");
+
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: SHANNON_HEX_CHAIN_ID }]
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902 || switchError?.data?.originalError?.code === 4902) {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: SHANNON_HEX_CHAIN_ID,
+              chainName: "Somnia Shannon Testnet",
+              nativeCurrency: { name: "STT", symbol: "STT", decimals: 18 },
+              rpcUrls: [RPC_URL],
+              blockExplorerUrls: [EXPLORER_URL]
+            }]
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+
+    // Connect Wallet Function
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("No Web3 wallet (MetaMask / Rabby) detected in your browser.");
+        addLog("WALLET", "No Web3 provider detected in browser.", "text-amber-400");
+        return;
+      }
+
+      try {
+        btnWallet.disabled = true;
+        walletLabel.textContent = "Connecting...";
+
+        await ensureShannonNetwork();
+
+        walletClient = createWalletClient({
+          chain: somniaShannonChain,
+          transport: custom(window.ethereum)
+        });
+
+        const accounts = await walletClient.requestAddresses();
+        if (accounts && accounts.length > 0) {
+          userAddress = accounts[0];
+          walletLabel.textContent = truncateAddress(userAddress);
+          btnWallet.className = "bg-gray-900/80 hover:bg-gray-800 border border-emerald-500/80 px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-emerald-300 transition duration-200";
+          btnDisconnect.classList.remove('hidden');
+
+          addLog("WALLET", `Connected ${userAddress} on Somnia Shannon (Chain 50312)`, "text-emerald-400 font-bold");
+          await refreshBalances();
+        }
+      } catch (err) {
+        console.error("Wallet connection error:", err);
+        addLog("WALLET", `Connection failed: ${err.message}`, "text-rose-400");
+        walletLabel.textContent = "Connect Wallet";
+        btnWallet.className = "bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200";
+      } finally {
+        btnWallet.disabled = false;
+      }
+    }
+
+    // Disconnect Wallet Function
+    function disconnectWallet() {
+      userAddress = null;
+      walletClient = null;
+      walletLabel.textContent = "Connect Wallet";
+      btnWallet.className = "bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200";
+      btnDisconnect.classList.add('hidden');
+      faucetBanner.classList.add('hidden');
+      balUsdcEl.textContent = "486.00";
+      balSttEl.textContent = "1.500";
+      addLog("WALLET", "Wallet disconnected. Returning to default telemetry view.", "text-gray-400");
+    }
+
+    // Action A: Mint Complete Set on DreamDEX Pool
+    async function handleMintSet() {
+      if (!userAddress || !walletClient) {
+        await connectWallet();
+        if (!userAddress) return;
+      }
+
+      try {
+        btnMintSet.disabled = true;
+        btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Approving & Minting...`;
+
+        addLog("MINT_SET", "Initiating Complete-Set Mint: 1.0 tUSDC &rarr; 1.0 YES + 1.0 NO...", "text-purple-400 font-semibold");
+
+        const mintAmount = 1_000_000n; // 1 tUSDC (6 decimals)
+
+        // 1. Check & Approve Allowance
+        const allowance = await publicClient.readContract({
+          address: COLLATERAL_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: "allowance",
+          args: [userAddress, POOL_ADDRESS]
+        });
+
+        if (allowance < mintAmount) {
+          addLog("APPROVE", `Approving DreamDEX Pool (${truncateAddress(POOL_ADDRESS)}) for tUSDC collateral...`, "text-cyan-400");
+          const approveHash = await walletClient.writeContract({
+            address: COLLATERAL_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [POOL_ADDRESS, 2n ** 256n - 1n],
+            account: userAddress
+          });
+          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}/tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>`, "text-cyan-400");
+          await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        }
+
+        // 2. Execute mintSet on pool
+        addLog("MINT_SET", `Submitting mintSet(1 tUSDC) on pool ${truncateAddress(POOL_ADDRESS)}...`, "text-purple-400");
+        const mintHash = await walletClient.writeContract({
+          address: POOL_ADDRESS,
+          abi: BINARY_POOL_ABI,
+          functionName: "mintSet",
+          args: [userAddress, userAddress, mintAmount],
+          account: userAddress
+        });
+
+        addLog("MINT_SET", `Mint confirmed on-chain! Tx: <a href="${EXPLORER_URL}/tx/${mintHash}" target="_blank" class="text-emerald-400 underline font-mono font-bold">${truncateAddress(mintHash)}</a>`, "text-emerald-400");
+        
+        await refreshBalances();
+      } catch (err) {
+        console.error("MintSet error:", err);
+        addLog("MINT_SET", `Execution failed or rejected: ${err.shortMessage || err.message}`, "text-rose-400");
+      } finally {
+        btnMintSet.disabled = false;
+        btnMintSet.innerHTML = `<i data-lucide="layers" class="w-4 h-4"></i><span>Mint 1 Complete Set (1 tUSDC &rarr; 1 YES + 1 NO)</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    // Action B: Execute Downside Hedge (BUY_NO)
+    async function handleLiveHedge() {
+      if (!userAddress || !walletClient) {
+        await connectWallet();
+        if (!userAddress) return;
+      }
+
+      try {
+        btnLiveHedge.disabled = true;
+        btnLiveHedge.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Executing Hedge Order...`;
+
+        addLog("IOC_HEDGE", `[JUDGE ACTION] Submitting Downside Hedge Order (BUY_NO) for 1 contract...`, "text-rose-400 font-bold");
+
+        const hedgePrice = 520_000n; // 0.52 USDC limit (52%)
+        const hedgeQuantity = 1_000_000n; // 1 contract (1e6)
+
+        const poolExpiryNs = await publicClient.readContract({
+          address: POOL_ADDRESS,
+          abi: BINARY_POOL_ABI,
+          functionName: "marketExpiryNs"
+        }).catch(() => BigInt(Math.floor(Date.now() / 1000) + 900) * 1_000_000_000n);
+
+        const allowance = await publicClient.readContract({
+          address: COLLATERAL_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: "allowance",
+          args: [userAddress, POOL_ADDRESS]
+        });
+
+        if (allowance < hedgeQuantity) {
+          addLog("APPROVE", `Approving pool router for downside hedge collateral...`, "text-cyan-400");
+          const approveHash = await walletClient.writeContract({
+            address: COLLATERAL_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [POOL_ADDRESS, 2n ** 256n - 1n],
+            account: userAddress
+          });
+          await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        }
+
+        const txHash = await walletClient.writeContract({
+          address: POOL_ADDRESS,
+          abi: BINARY_POOL_ABI,
+          functionName: "placeBinaryOrder",
+          args: [
+            2, // kind = BUY_NO
+            hedgePrice,
+            hedgeQuantity,
+            poolExpiryNs,
+            1, // orderType = LIMIT
+            0,
+            "0x0000000000000000000000000000000000000000",
+            0n,
+            0n
+          ],
+          account: userAddress
+        });
+
+        addLog("IOC_HEDGE", `Downside Hedge Order placed! Tx: <a href="${EXPLORER_URL}/tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>`, "text-emerald-400 font-bold");
+        await refreshBalances();
+      } catch (err) {
+        console.error("Downside Hedge error:", err);
+        addLog("IOC_HEDGE", `Hedge placement failed: ${err.shortMessage || err.message}`, "text-rose-400");
+      } finally {
+        btnLiveHedge.disabled = false;
+        btnLiveHedge.innerHTML = `<i data-lucide="shield-alert" class="w-4 h-4"></i><span>Execute Live Downside Hedge (IOC BUY_NO on Shannon)</span>`;
+        lucide.createIcons();
+      }
     }
 
     // Update Health Shield visuals based on Health Factor
@@ -470,6 +835,7 @@
         shieldRatio.textContent = "Hedge: 25 NO @ 55.1%";
         shieldDesc.innerHTML = `<span class="text-white font-semibold">Immediate Downside Protection Triggered:</span> Purchased 25 BUY_NO contracts ($25.00 max payout) to offset $1,300.00 liquidation impairment.`;
 
+        shieldActionContainer.classList.remove('hidden');
         addLog("IOC_HEDGE", "Emergency Trigger (HF=" + healthFactor.toFixed(2) + "): Bought 25 NO contracts @ 50.1% limit (Tx: 0x" + Math.random().toString(16).slice(2, 10) + ")", "text-rose-400 font-bold");
       } else if (healthFactor < 1.20) {
         // HEDGE REQUIRED TIER (1.15 <= HF < 1.20)
@@ -485,6 +851,7 @@
         shieldRatio.textContent = "Hedge: 15 NO @ 50.1%";
         shieldDesc.innerHTML = `Health factor dropped to ${healthFactor.toFixed(2)}. Submitting IOC BUY_NO order to hedge downside risk.`;
 
+        shieldActionContainer.classList.remove('hidden');
         addLog("IOC_HEDGE", "Hedge Triggered (HF=" + healthFactor.toFixed(2) + "): Purchased 15 NO contracts via DreamDEX IOC", "text-amber-400");
       } else if (healthFactor <= 1.25) {
         // ALERT TIER (1.20 <= HF <= 1.25)
@@ -499,6 +866,8 @@
         shieldRatio.className = "text-xs font-mono text-yellow-400";
         shieldRatio.textContent = "Monitoring";
         shieldDesc.innerHTML = `Loan HF approaching hedge boundary (1.20). Order book liquidity armed.`;
+
+        shieldActionContainer.classList.add('hidden');
       } else {
         // SAFE TIER (> 1.25)
         metricHf.className = "text-xl font-bold font-mono text-emerald-400 mt-1";
@@ -512,6 +881,8 @@
         shieldRatio.className = "text-xs font-mono text-gray-400";
         shieldRatio.textContent = "Hedge: Idle";
         shieldDesc.innerHTML = `Health Factor is above 1.20 threshold. No downside hedging required.`;
+
+        shieldActionContainer.classList.add('hidden');
       }
     }
 
@@ -607,6 +978,28 @@
         addLog("POST_ORDER", `Refreshed 180bps quotes: YES Bid=${yesBid} Ask=${yesAsk} | NO Bid=${noBid} Ask=${noAsk}`, "text-cyan-400");
       }
     }, 3000);
+
+    // Event Listeners for Web3 Actions
+    btnWallet.addEventListener('click', connectWallet);
+    btnDisconnect.addEventListener('click', disconnectWallet);
+    btnMintSet.addEventListener('click', handleMintSet);
+    btnLiveHedge.addEventListener('click', handleLiveHedge);
+
+    // Auto-reconnect if window.ethereum has authorized accounts
+    if (window.ethereum) {
+      window.ethereum.on?.('accountsChanged', (accounts) => {
+        if (!accounts || accounts.length === 0) disconnectWallet();
+        else {
+          userAddress = accounts[0];
+          walletLabel.textContent = truncateAddress(userAddress);
+          refreshBalances();
+        }
+      });
+
+      window.ethereum.on?.('chainChanged', () => {
+        refreshBalances();
+      });
+    }
   </script>
 </body>
 </html>
