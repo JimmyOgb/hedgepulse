@@ -91,12 +91,15 @@
     </div>
   </header>
 
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
   <!-- FAUCET WARNING BANNER (Hidden unless balances low) -->
   <div id="faucet-banner" class="hidden bg-amber-950/40 border-b border-amber-800/60 px-6 py-2 text-xs text-amber-300">
     <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
       <div class="flex items-center gap-2">
         <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
-        <span><strong>Low Testnet Balance:</strong> Need testnet tokens to test live on Somnia Shannon?</span>
+        <span id="faucet-banner-msg"><strong>Low Testnet Balance:</strong> Need testnet tokens to test live on Somnia Shannon?</span>
       </div>
       <div class="flex items-center gap-4 text-xs">
         <a href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" class="text-amber-400 hover:text-amber-200 underline font-semibold flex items-center gap-1">
@@ -156,26 +159,57 @@
       </div>
     </div>
 
-    <!-- JUDGE ON-CHAIN INTERACTION SANDBOX BAR -->
-    <div class="bg-gradient-to-r from-gray-900 via-indigo-950/40 to-gray-900 border border-cyan-500/30 rounded-2xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-          <i data-lucide="zap" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h3 class="font-bold text-white text-sm">Judge Testnet Sandbox</h3>
-            <span class="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded-full font-semibold">Live On-Chain Execution</span>
+    <!-- DYNAMIC MARKET RESOLUTION & JUDGE SANDBOX BAR -->
+    <div class="bg-gradient-to-r from-gray-900 via-indigo-950/40 to-gray-900 border border-cyan-500/30 rounded-2xl p-4 shadow-lg space-y-3.5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <i data-lucide="zap" class="w-5 h-5"></i>
           </div>
-          <p class="text-xs text-gray-400">Connect MetaMask or Rabby on Shannon Testnet to execute real contract calls directly from the cockpit.</p>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-white text-sm">Judge Testnet Sandbox &amp; Dynamic Market Discovery</h3>
+              <span id="pool-status-badge" class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/80 px-2 py-0.5 rounded-full font-semibold">Active Window</span>
+            </div>
+            <p class="text-xs text-gray-400">Dynamic DreamDEX market resolution queries live active binary pools. Connect MetaMask on Shannon to execute real calls.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+          <button id="btn-discover-pools" class="bg-gray-800 hover:bg-gray-700 text-cyan-300 border border-cyan-500/40 text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm font-medium">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Refresh Active Pools</span>
+          </button>
+          <button id="btn-mint-set" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-md shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+            <span>Mint 1 Complete Set (1 tUSDC &rarr; 1 YES + 1 NO)</span>
+          </button>
         </div>
       </div>
 
-      <div class="flex items-center gap-3 flex-wrap">
-        <button id="btn-mint-set" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-md shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
-          <i data-lucide="layers" class="w-4 h-4"></i>
-          <span>Mint 1 Complete Set (1 tUSDC &rarr; 1 YES + 1 NO)</span>
-        </button>
+      <!-- Fallback / Interactive Pool Resolution Controls -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center pt-2 border-t border-gray-800/70 text-xs">
+        <div class="md:col-span-6 flex items-center gap-2">
+          <label for="select-pool" class="text-gray-400 font-medium whitespace-nowrap text-[11px] flex items-center gap-1">
+            <i data-lucide="list-filter" class="w-3 h-3 text-cyan-400"></i> Discovered Live Pools:
+          </label>
+          <select id="select-pool" class="w-full bg-gray-950/90 border border-gray-800 text-gray-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-cyan-500 font-mono">
+            <option value="">Querying DreamDEX Indexer...</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-4 flex items-center gap-2">
+          <label for="input-pool-address" class="text-gray-400 font-medium whitespace-nowrap text-[11px] flex items-center gap-1">
+            <i data-lucide="link" class="w-3 h-3 text-cyan-400"></i> Active Market Address:
+          </label>
+          <input type="text" id="input-pool-address" class="w-full bg-gray-950/90 border border-gray-800 text-cyan-300 text-xs rounded-lg px-2.5 py-1.5 font-mono focus:outline-none focus:border-cyan-500" placeholder="0x..." spellcheck="false" />
+        </div>
+
+        <div class="md:col-span-2 flex items-center gap-2">
+          <button id="btn-apply-pool" class="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs px-3 py-1.5 rounded-lg font-medium transition text-center">
+            Set Target
+          </button>
+        </div>
       </div>
     </div>
 
@@ -187,8 +221,8 @@
         <div>
           <div class="flex items-center justify-between pb-3 border-b border-gray-800/80">
             <div class="flex items-center gap-2">
-              <span class="p-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 font-bold font-mono text-xs">BTC</span>
-              <h2 class="font-semibold text-white">BTC-90000-15M Event Market</h2>
+              <span id="p1-asset-badge" class="p-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 font-bold font-mono text-xs">BTC</span>
+              <h2 id="p1-market-title" class="font-semibold text-white">BTC-90000-15M Event Market</h2>
             </div>
             <div class="flex items-center gap-1.5 text-xs font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-2.5 py-1 rounded-md">
               <i data-lucide="clock" class="w-3.5 h-3.5"></i>
@@ -204,7 +238,7 @@
             </div>
             <div class="border-l border-gray-800">
               <span class="text-xs text-gray-400">Target Strike (K)</span>
-              <div class="text-lg font-bold font-mono text-yellow-400 mt-0.5">$90,000.00</div>
+              <div class="text-lg font-bold font-mono text-yellow-400 mt-0.5" id="target-strike-val">$90,000.00</div>
             </div>
           </div>
 
@@ -252,7 +286,7 @@
         <div class="mt-4 pt-3 border-t border-gray-800/60 flex items-center justify-between text-xs text-gray-400">
           <span>Tick Size: <strong class="font-mono text-gray-200">1,000 (0.001)</strong></span>
           <span>Lot Size: <strong class="font-mono text-gray-200">1,000</strong></span>
-          <span>Pool: <span class="font-mono text-cyan-400">0x1711...4e11</span></span>
+          <span>Pool: <a id="link-pool-address" href="https://shannon-explorer.somnia.network/address/0x171186a2a8d237ad194dd3cae9b05326407c4e11" target="_blank" class="font-mono text-cyan-400 hover:underline">0x1711...4e11</a></span>
         </div>
       </section>
 
@@ -475,6 +509,7 @@
       createPublicClient,
       createWalletClient,
       custom,
+      fallback,
       http,
       parseUnits,
       formatUnits,
@@ -484,17 +519,31 @@
 
     lucide.createIcons();
 
-    // Constant Addresses & Chain Specs
+    // Constant Addresses & Official Shannon Specs
     const SHANNON_CHAIN_ID = 50312;
     const SHANNON_HEX_CHAIN_ID = "0xc488";
-    const RPC_URL = "https://dream-rpc.somnia.network";
+    const OFFICIAL_SHANNON_RPC = "https://dream-rpc.shannon.somnia.network";
+    const FALLBACK_RPC = "https://api.infra.testnet.somnia.network/";
+    const BACKUP_RPC = "https://dream-rpc.somnia.network";
     const RPC_URLS = [
-      "https://dream-rpc.somnia.network",
-      "https://api.infra.testnet.somnia.network/"
+      OFFICIAL_SHANNON_RPC,
+      FALLBACK_RPC,
+      BACKUP_RPC
     ];
     const EXPLORER_URL = "https://shannon-explorer.somnia.network/";
-    const POOL_ADDRESS = "0x171186a2a8d237ad194dd3cae9b05326407c4e11";
     const COLLATERAL_ADDRESS = "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E"; // tUSDC
+    const GRAPHQL_ENDPOINT = "https://dev.smk.somnia.host/v1/graphql";
+
+    // Dynamic Active Pool Target (defaults to latest BTC binary market, dynamically updated)
+    let POOL_ADDRESS = "0x7392bc95f3689c57b8b6643757b8b02a1a8fec39";
+    let currentMarket = {
+      marketId: "0x0000000000000000000000000000000000000000000000000000000000000131",
+      poolAddress: POOL_ADDRESS,
+      asset: "BTC",
+      strike: 90000,
+      expiry: Math.floor(Date.now() / 1000) + 900,
+      clobStatus: "Trading"
+    };
 
     const somniaShannonChain = {
       id: SHANNON_CHAIN_ID,
@@ -509,6 +558,93 @@
       },
       testnet: true
     };
+
+    // Helper: Toast Notifications
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      if (!container) return;
+      const toast = document.createElement("div");
+      const bgBorder =
+        type === "error" ? "bg-rose-950/95 border-rose-600/80 text-rose-200" :
+        type === "warning" ? "bg-amber-950/95 border-amber-600/80 text-amber-200" :
+        type === "success" ? "bg-emerald-950/95 border-emerald-600/80 text-emerald-200" :
+        "bg-gray-900/95 border-cyan-500/80 text-cyan-200";
+      
+      const icon =
+        type === "error" ? "alert-circle" :
+        type === "warning" ? "alert-triangle" :
+        type === "success" ? "check-circle" :
+        "info";
+
+      toast.className = `pointer-events-auto px-3.5 py-2.5 rounded-xl border shadow-2xl text-xs flex items-start gap-2.5 transition-all duration-300 font-sans backdrop-blur-md ${bgBorder}`;
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 mt-0.5 shrink-0"></i><div class="flex-1 leading-snug">${message}</div>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-4px)";
+        setTimeout(() => toast.remove(), 300);
+      }, 5500);
+    }
+
+    // Helper: Faucet Banner management
+    function showFaucetBanner(msg) {
+      const banner = document.getElementById("faucet-banner");
+      const bannerMsg = document.getElementById("faucet-banner-msg");
+      if (bannerMsg) {
+        bannerMsg.innerHTML = `<strong>Balance Alert:</strong> ${msg}`;
+      }
+      if (banner) banner.classList.remove('hidden');
+    }
+
+    function hideFaucetBanner() {
+      const banner = document.getElementById("faucet-banner");
+      if (banner) banner.classList.add('hidden');
+    }
+
+    // Helper: Extract & decode exact contract revert reasons
+    function extractRevertReason(err) {
+      if (!err) return "Unknown error occurred";
+
+      if (typeof err.walk === "function") {
+        const walked = err.walk((e) => Boolean(e.data?.message || e.reason || (e.shortMessage && !e.shortMessage.includes("execution reverted"))));
+        if (walked?.data?.message) return walked.data.message;
+        if (walked?.reason) return walked.reason;
+      }
+
+      const str = err.shortMessage || err.message || String(err);
+
+      const reasonMatch = str.match(/reverted with the following reason:\s*([^\n]+)/i);
+      if (reasonMatch && reasonMatch[1]) return reasonMatch[1].trim();
+
+      const customMatch = str.match(/reverted with custom error\s*['"]?([a-zA-Z0-9_]+(?:\([^)]*\))?)['"]?/i);
+      if (customMatch && customMatch[1]) return customMatch[1].trim();
+
+      const reasonMatch2 = str.match(/reverted with reason:\s*([^\n]+)/i);
+      if (reasonMatch2 && reasonMatch2[1]) return reasonMatch2[1].trim();
+
+      const execMatch = str.match(/execution reverted:\s*([^\n]+)/i);
+      if (execMatch && execMatch[1]) return execMatch[1].trim();
+
+      const known = [
+        "MarketExpired",
+        "InsufficientBalance",
+        "PostOnlyWouldCross",
+        "OrderNotFound",
+        "InvalidOrder",
+        "transfer amount exceeds balance",
+        "insufficient allowance",
+        "ERC20: transfer amount exceeds balance",
+        "ERC20: insufficient allowance"
+      ];
+      for (const k of known) {
+        if (str.toLowerCase().includes(k.toLowerCase())) return k;
+      }
+
+      if (err.shortMessage) return err.shortMessage;
+      return str.length > 140 ? str.slice(0, 140) + "..." : str;
+    }
 
     // Helper: Detect user rejection from MetaMask / viem
     function isUserRejected(err) {
@@ -538,10 +674,14 @@
       "function marketExpiryNs() external view returns (uint64)"
     ]);
 
-    // Public Read Client (fallback to RPC if no wallet)
+    // Public Read Client with resilient multi-RPC fallback
     let publicClient = createPublicClient({
       chain: somniaShannonChain,
-      transport: http(RPC_URL)
+      transport: fallback([
+        http(OFFICIAL_SHANNON_RPC),
+        http(FALLBACK_RPC),
+        http(BACKUP_RPC)
+      ])
     });
 
     let walletClient = null;
@@ -595,6 +735,176 @@
       return addr.slice(0, 6) + "..." + addr.slice(-4);
     }
 
+    // Dynamic Market Discovery: Query DreamDEX GraphQL for active, unfinalized pools
+    async function discoverActivePools() {
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const query = `
+          query GetLiveBinaryMarkets {
+            Market(
+              where: {
+                marketType: { _eq: "BINARY" }
+                clobStatus: { _eq: "Trading" }
+                finalized: { _eq: false }
+                expiry: { _gt: "${now}" }
+              }
+              order_by: { expiry: asc }
+              limit: 25
+            ) {
+              id
+              marketId
+              poolAddress
+              asset
+              strike
+              expiry
+              collateral
+              clobStatus
+            }
+          }
+        `;
+
+        const response = await fetch(GRAPHQL_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+          signal: AbortSignal.timeout(6000)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        const markets = json?.data?.Market || [];
+
+        const viable = markets.filter(m => {
+          const exp = Number(m.expiry);
+          const isCollateral = m.collateral?.toLowerCase() === COLLATERAL_ADDRESS.toLowerCase();
+          return exp > now + 30 && isCollateral && m.clobStatus === "Trading";
+        });
+
+        return viable;
+      } catch (err) {
+        console.warn("Market discovery warning:", err.message);
+        return [];
+      }
+    }
+
+    // Set the currently targeted active pool across cockpit UI
+    function setActiveMarketPool(market) {
+      if (!market || !market.poolAddress) return;
+      POOL_ADDRESS = market.poolAddress;
+      currentMarket = {
+        ...currentMarket,
+        ...market,
+        poolAddress: market.poolAddress,
+        strike: Number(market.strike) > 0 ? Number(market.strike) : 90000,
+        expiry: Number(market.expiry) || currentMarket.expiry
+      };
+
+      const inputEl = document.getElementById("input-pool-address");
+      if (inputEl) inputEl.value = POOL_ADDRESS;
+
+      const linkEl = document.getElementById("link-pool-address");
+      if (linkEl) {
+        linkEl.textContent = truncateAddress(POOL_ADDRESS);
+        linkEl.href = `${EXPLORER_URL}address/${POOL_ADDRESS}`;
+      }
+
+      const titleEl = document.getElementById("p1-market-title");
+      if (titleEl) {
+        titleEl.textContent = `${currentMarket.asset}-${currentMarket.strike}-15M Event Market`;
+      }
+
+      const badgeEl = document.getElementById("p1-asset-badge");
+      if (badgeEl) {
+        badgeEl.textContent = currentMarket.asset;
+      }
+
+      const strikeEl = document.getElementById("target-strike-val");
+      if (strikeEl) {
+        strikeEl.textContent = `$${currentMarket.strike.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      if (currentMarket.expiry > now) {
+        timeRemainingSec = currentMarket.expiry - now;
+      }
+
+      const badge = document.getElementById("pool-status-badge");
+      if (badge) {
+        badge.className = "text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/80 px-2 py-0.5 rounded-full font-semibold";
+        badge.textContent = "Live Trading";
+      }
+
+      addLog("DISCOVER", `Target Active Pool set to ${truncateAddress(POOL_ADDRESS)} (${currentMarket.asset} Strike $${currentMarket.strike})`, "text-emerald-400 font-semibold");
+    }
+
+    // Refresh active market pools and update selector
+    async function refreshActiveMarketPool(preferredPoolAddress = null) {
+      addLog("DISCOVER", "Querying DreamDEX GraphQL for active binary pools...", "text-cyan-400");
+      const pools = await discoverActivePools();
+      const selectEl = document.getElementById("select-pool");
+
+      if (selectEl) {
+        selectEl.innerHTML = "";
+        if (pools.length === 0) {
+          const opt = document.createElement("option");
+          opt.value = POOL_ADDRESS;
+          opt.textContent = `Active Pool (${truncateAddress(POOL_ADDRESS)})`;
+          selectEl.appendChild(opt);
+        } else {
+          const now = Math.floor(Date.now() / 1000);
+          pools.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.poolAddress;
+            const diffMin = Math.round((Number(p.expiry) - now) / 60);
+            opt.textContent = `${p.asset} (Pool: ${truncateAddress(p.poolAddress)}) - Expires in ${diffMin}m`;
+            selectEl.appendChild(opt);
+          });
+        }
+      }
+
+      if (preferredPoolAddress) {
+        const found = pools.find(p => p.poolAddress.toLowerCase() === preferredPoolAddress.toLowerCase());
+        if (found) {
+          setActiveMarketPool(found);
+          if (selectEl) selectEl.value = found.poolAddress;
+        } else {
+          setActiveMarketPool({
+            poolAddress: preferredPoolAddress,
+            asset: "BTC",
+            strike: 90000,
+            expiry: Math.floor(Date.now() / 1000) + 900
+          });
+        }
+        return;
+      }
+
+      if (pools.length > 0) {
+        const btcPool = pools.find(p => (p.asset || "").toUpperCase() === "BTC") || pools[0];
+        setActiveMarketPool(btcPool);
+        if (selectEl) selectEl.value = btcPool.poolAddress;
+      } else {
+        addLog("DISCOVER", "No unexpired pools returned from indexer. Maintaining current target pool.", "text-amber-400");
+      }
+    }
+
+    // On-chain verification of pool expiry & status
+    async function checkPoolExpiryOnchain(poolAddr) {
+      try {
+        const poolExpiryNs = await publicClient.readContract({
+          address: poolAddr,
+          abi: BINARY_POOL_ABI,
+          functionName: "marketExpiryNs"
+        });
+        const poolExpirySec = Number(poolExpiryNs / 1_000_000_000n);
+        const now = Math.floor(Date.now() / 1000);
+        const isExpired = poolExpirySec > 0 && poolExpirySec <= now;
+        return { isExpired, expirySec: poolExpirySec };
+      } catch (err) {
+        console.warn("On-chain marketExpiryNs read warning:", err.message);
+        return { isExpired: false, expirySec: 0 };
+      }
+    }
+
     // Refresh live on-chain balances
     async function refreshBalances() {
       if (!userAddress) return;
@@ -612,150 +922,35 @@
         const formattedStt = parseFloat(formatEther(sttBal)).toFixed(3);
         const formattedUsdc = parseFloat(formatUnits(usdcBal, 6)).toFixed(2);
 
-        balSttEl.textContent = formattedUsdc ? formattedUsdc : "0.00";
-        balUsdcEl.textContent = formattedUsdc;
         balSttEl.textContent = formattedStt;
+        balUsdcEl.textContent = formattedUsdc;
 
-        if (parseFloat(formattedStt) < 0.05 || parseFloat(formattedUsdc) === 0) {
-          faucetBanner.classList.remove('hidden');
+        const sttFloat = parseFloat(formattedStt);
+        const usdcFloat = parseFloat(formattedUsdc);
+
+        if (sttFloat < 0.01) {
+          showFaucetBanner("Insufficient STT for gas. Claim STT from Somnia Faucet.");
+        } else if (usdcFloat < 1.0) {
+          showFaucetBanner(`Insufficient tUSDC collateral (${formattedUsdc}). Claim tUSDC from DreamDEX faucet.`);
         } else {
-          faucetBanner.classList.add('hidden');
+          hideFaucetBanner();
         }
       } catch (err) {
         console.warn("Balance refresh warning:", err.message);
       }
     }
 
-    // Switch or Add Shannon Testnet to Wallet
-    async function ensureSomniaNetwork() {
-      if (!window.ethereum) throw new Error("No browser Web3 wallet detected");
-
-      try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: SHANNON_HEX_CHAIN_ID }]
-        });
-      } catch (switchError) {
-        const errMsg = switchError?.message || "";
-        const errCode = switchError?.code ?? switchError?.data?.originalError?.code ?? switchError?.cause?.code;
-        const errStr = String(switchError);
-
-        const isUnrecognized =
-          errCode === 4902 ||
-          errMsg.includes("Unrecognized chain ID") ||
-          errMsg.includes("wallet_addEthereumChain") ||
-          errStr.includes("4902") ||
-          errStr.includes("Unrecognized chain ID") ||
-          errStr.includes("wallet_addEthereumChain");
-
-        if (isUnrecognized) {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [{
-              chainId: SHANNON_HEX_CHAIN_ID,
-              chainName: "Somnia Shannon Testnet",
-              nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
-              rpcUrls: [
-                "https://dream-rpc.somnia.network",
-                "https://api.infra.testnet.somnia.network/"
-              ],
-              blockExplorerUrls: ["https://shannon-explorer.somnia.network/"]
-            }]
-          });
-        } else {
-          throw switchError;
-        }
-      }
-
-      const activeChainHex = await window.ethereum.request({ method: "eth_chainId" });
-      if (!activeChainHex || parseInt(activeChainHex, 16) !== SHANNON_CHAIN_ID) {
-        throw new Error("Somnia Shannon Testnet (50312) network switch required");
-      }
-      return true;
-    }
-    const ensureShannonNetwork = ensureSomniaNetwork;
-
-    // Strict Guard: Verify Shannon Network (50312) before any contract call
-    async function verifySomniaNetworkGuard() {
-      if (!window.ethereum) throw new Error("No browser Web3 wallet detected");
-      const currentChainHex = await window.ethereum.request({ method: "eth_chainId" });
-      if (!currentChainHex || parseInt(currentChainHex, 16) !== SHANNON_CHAIN_ID) {
-        addLog("NETWORK", "Wallet is not on Somnia Shannon Testnet. Requesting network switch...", "text-amber-400");
-        await ensureSomniaNetwork();
-      }
-      const verifiedChainHex = await window.ethereum.request({ method: "eth_chainId" });
-      if (!verifiedChainHex || parseInt(verifiedChainHex, 16) !== SHANNON_CHAIN_ID) {
-        throw new Error("Execution halted: Somnia Shannon Testnet (50312) is required.");
-      }
-    }
-
-    // Connect Wallet Function
-    async function connectWallet() {
-      if (!window.ethereum) {
-        alert("No Web3 wallet (MetaMask / Rabby) detected in your browser.");
-        addLog("WALLET", "No Web3 provider detected in browser.", "text-amber-400");
-        return;
-      }
-
-      try {
-        btnWallet.disabled = true;
-        walletLabel.textContent = "Connecting...";
-
-        await ensureSomniaNetwork();
-
-        walletClient = createWalletClient({
-          chain: somniaShannonChain,
-          transport: custom(window.ethereum)
-        });
-
-        const accounts = await walletClient.requestAddresses();
-        if (accounts && accounts.length > 0) {
-          userAddress = accounts[0];
-          walletLabel.textContent = truncateAddress(userAddress);
-          btnWallet.className = "bg-gray-900/80 hover:bg-gray-800 border border-emerald-500/80 px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-emerald-300 transition duration-200";
-          btnDisconnect.classList.remove('hidden');
-
-          addLog("WALLET", `Connected ${userAddress} on Somnia Shannon (Chain 50312)`, "text-emerald-400 font-bold");
-          await refreshBalances();
-        }
-      } catch (err) {
-        console.error("Wallet connection error:", err);
-        if (isUserRejected(err)) {
-          addLog("[INFO]", "Transaction cancelled by user.", "text-amber-400");
-        } else {
-          addLog("WALLET", `Connection failed: ${err.message}`, "text-rose-400");
-        }
-        walletLabel.textContent = "Connect Wallet";
-        btnWallet.className = "bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200";
-      } finally {
-        btnWallet.disabled = false;
-      }
-    }
-
-    // Disconnect Wallet Function
-    function disconnectWallet() {
-      userAddress = null;
-      walletClient = null;
-      walletLabel.textContent = "Connect Wallet";
-      btnWallet.className = "bg-gray-900/80 hover:bg-gray-800 border border-cyan-500/60 glow-pulse px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono text-cyan-300 transition duration-200";
-      btnDisconnect.classList.add('hidden');
-      faucetBanner.classList.add('hidden');
-      balUsdcEl.textContent = "486.00";
-      balSttEl.textContent = "1.500";
-      addLog("WALLET", "Wallet disconnected. Returning to default telemetry view.", "text-gray-400");
-    }
-
-    // Action A: Mint Complete Set on DreamDEX Pool
+    // Action A: Mint Complete Set (1 tUSDC -> 1 YES + 1 NO)
     async function handleMintSet() {
       if (!window.ethereum) {
-        alert("No Web3 wallet (MetaMask / Rabby) detected in your browser.");
+        showToast("No Web3 wallet (MetaMask / Rabby) detected.", "error");
         addLog("WALLET", "No Web3 provider detected in browser.", "text-amber-400");
         return;
       }
 
       try {
         btnMintSet.disabled = true;
-        btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Preparing Mint...`;
+        btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Validating Pre-flight...`;
 
         if (!userAddress || !walletClient) {
           await connectWallet();
@@ -770,12 +965,54 @@
           transport: custom(window.ethereum)
         });
 
-        addLog("MINT_SET", "Initiating Complete-Set Mint: 1.0 tUSDC &rarr; 1.0 YES + 1.0 NO...", "text-purple-400 font-semibold");
+        // 1. Pre-flight Balance Checks
+        const [sttBal, usdcBal] = await Promise.all([
+          publicClient.getBalance({ address: userAddress }).catch(() => 0n),
+          publicClient.readContract({
+            address: COLLATERAL_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "balanceOf",
+            args: [userAddress]
+          }).catch(() => 0n)
+        ]);
+
+        const formattedStt = parseFloat(formatEther(sttBal)).toFixed(3);
+        const formattedUsdc = parseFloat(formatUnits(usdcBal, 6)).toFixed(2);
+        const sttFloat = parseFloat(formattedStt);
+        const usdcFloat = parseFloat(formattedUsdc);
+
+        if (sttFloat < 0.01) {
+          const msg = "Insufficient STT for gas. Claim STT from Somnia Faucet.";
+          showFaucetBanner(msg);
+          showToast(msg, "warning");
+          addLog("PREFLIGHT", msg, "text-amber-400 font-bold");
+          return;
+        }
+
+        if (usdcFloat < 1.0) {
+          const msg = `Insufficient tUSDC collateral (${formattedUsdc}). Claim tUSDC from DreamDEX faucet.`;
+          showFaucetBanner(msg);
+          showToast(msg, "warning");
+          addLog("PREFLIGHT", msg, "text-amber-400 font-bold");
+          return;
+        }
+
+        // 2. On-chain Market Expiry & Status Verification
+        const expiryCheck = await checkPoolExpiryOnchain(POOL_ADDRESS);
+        if (expiryCheck.isExpired) {
+          const msg = "This 15m window has expired. Refreshing to the latest active pool...";
+          showToast(msg, "warning");
+          addLog("POOL", msg, "text-amber-400 font-bold");
+          await refreshActiveMarketPool();
+          return;
+        }
+
+        addLog("MINT_SET", `[JUDGE ACTION] Minting 1 Complete Set (1 YES + 1 NO) via Pool ${truncateAddress(POOL_ADDRESS)}...`, "text-cyan-400 font-bold");
 
         const mintAmount = 1_000_000n; // 1 tUSDC (6 decimals)
         const maxUint256 = 2n ** 256n - 1n;
 
-        // 1. Inspect allowance of tUSDC (0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E) for DreamDEX pool (0x171186a2a8d237ad194dd3cae9b05326407c4e11)
+        // Inspect allowance of tUSDC for DreamDEX pool
         const allowance = await publicClient.readContract({
           address: COLLATERAL_ADDRESS,
           abi: ERC20_ABI,
@@ -783,10 +1020,9 @@
           args: [userAddress, POOL_ADDRESS]
         });
 
-        // If allowance < 1_000_000 (1 tUSDC), prompt tUSDC.approve(poolAddress, maxUint256) first and wait for confirmation
         if (allowance < mintAmount) {
-          btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Approving tUSDC...`;
-          addLog("APPROVE", `Allowance insufficient (< 1.0 tUSDC). Approving DreamDEX Pool (${truncateAddress(POOL_ADDRESS)}) for tUSDC collateral...`, "text-cyan-400");
+          btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Approving Collateral...`;
+          addLog("APPROVE", `Current allowance (${formatUnits(allowance, 6)} tUSDC) < 1.0 tUSDC. Submitting ERC20 approve...`, "text-cyan-400");
           const approveHash = await walletClient.writeContract({
             address: COLLATERAL_ADDRESS,
             abi: ERC20_ABI,
@@ -794,14 +1030,12 @@
             args: [POOL_ADDRESS, maxUint256],
             account: userAddress
           });
-          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}/tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>. Waiting for confirmation...`, "text-cyan-400");
+          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>. Waiting for confirmation...`, "text-cyan-400");
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
           addLog("APPROVE", "Approval confirmed on-chain.", "text-emerald-400");
         }
 
-        // 2. Once approved, proceed to call pool.mintSet(userAddress, userAddress, 1000000)
         btnMintSet.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Minting Complete Set...`;
-        addLog("MINT_SET", `Submitting mintSet(1000000) on pool ${truncateAddress(POOL_ADDRESS)}...`, "text-purple-400");
         const mintHash = await walletClient.writeContract({
           address: POOL_ADDRESS,
           abi: BINARY_POOL_ABI,
@@ -810,18 +1044,21 @@
           account: userAddress
         });
 
-        addLog("MINT_SET", `Mint submitted! Tx: <a href="${EXPLORER_URL}/tx/${mintHash}" target="_blank" class="text-purple-300 underline font-mono">${truncateAddress(mintHash)}</a>. Waiting for confirmation...`, "text-purple-400");
+        addLog("MINT_SET", `Mint transaction submitted! Tx: <a href="${EXPLORER_URL}tx/${mintHash}" target="_blank" class="text-emerald-300 underline font-mono font-bold">${truncateAddress(mintHash)}</a>. Waiting for confirmation...`, "text-cyan-400");
         await publicClient.waitForTransactionReceipt({ hash: mintHash });
 
-        addLog("MINT_SET", `Mint confirmed on-chain! Tx: <a href="${EXPLORER_URL}/tx/${mintHash}" target="_blank" class="text-emerald-400 underline font-mono font-bold">${truncateAddress(mintHash)}</a>`, "text-emerald-400 font-bold");
-        
+        addLog("MINT_SET", `Mint confirmed on-chain! Tx: <a href="${EXPLORER_URL}tx/${mintHash}" target="_blank" class="text-emerald-400 underline font-mono font-bold">${truncateAddress(mintHash)}</a>`, "text-emerald-400 font-bold");
+        showToast("Successfully minted 1 Complete Set (1 YES + 1 NO)!", "success");
         await refreshBalances();
       } catch (err) {
         console.error("MintSet error:", err);
         if (isUserRejected(err)) {
           addLog("[INFO]", "Transaction cancelled by user.", "text-amber-400");
+          showToast("Transaction cancelled by user.", "warning");
         } else {
-          addLog("MINT_SET", `Execution failed or rejected: ${err.shortMessage || err.message}`, "text-rose-400");
+          const reason = extractRevertReason(err);
+          showToast(`MintSet failed: ${reason}`, "error");
+          addLog("REVERT", `MintSet execution reverted: ${reason}`, "text-rose-400 font-bold");
         }
       } finally {
         btnMintSet.disabled = false;
@@ -833,14 +1070,14 @@
     // Action B: Execute Downside Hedge (BUY_NO)
     async function handleDownsideHedge() {
       if (!window.ethereum) {
-        alert("No Web3 wallet (MetaMask / Rabby) detected in your browser.");
+        showToast("No Web3 wallet (MetaMask / Rabby) detected.", "error");
         addLog("WALLET", "No Web3 provider detected in browser.", "text-amber-400");
         return;
       }
 
       try {
         btnLiveHedge.disabled = true;
-        btnLiveHedge.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Preparing Hedge Order...`;
+        btnLiveHedge.innerHTML = `<span class="animate-spin mr-1">&#9696;</span> Validating Pre-flight...`;
 
         if (!userAddress || !walletClient) {
           await connectWallet();
@@ -855,7 +1092,49 @@
           transport: custom(window.ethereum)
         });
 
-        addLog("IOC_HEDGE", `[JUDGE ACTION] Submitting Downside Hedge Order (BUY_NO) for 1 contract...`, "text-rose-400 font-bold");
+        // 1. Pre-flight Balance Checks
+        const [sttBal, usdcBal] = await Promise.all([
+          publicClient.getBalance({ address: userAddress }).catch(() => 0n),
+          publicClient.readContract({
+            address: COLLATERAL_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "balanceOf",
+            args: [userAddress]
+          }).catch(() => 0n)
+        ]);
+
+        const formattedStt = parseFloat(formatEther(sttBal)).toFixed(3);
+        const formattedUsdc = parseFloat(formatUnits(usdcBal, 6)).toFixed(2);
+        const sttFloat = parseFloat(formattedStt);
+        const usdcFloat = parseFloat(formattedUsdc);
+
+        if (sttFloat < 0.01) {
+          const msg = "Insufficient STT for gas. Claim STT from Somnia Faucet.";
+          showFaucetBanner(msg);
+          showToast(msg, "warning");
+          addLog("PREFLIGHT", msg, "text-amber-400 font-bold");
+          return;
+        }
+
+        if (usdcFloat < 0.52) {
+          const msg = `Insufficient tUSDC collateral (${formattedUsdc}). Claim tUSDC from DreamDEX faucet.`;
+          showFaucetBanner(msg);
+          showToast(msg, "warning");
+          addLog("PREFLIGHT", msg, "text-amber-400 font-bold");
+          return;
+        }
+
+        // 2. On-chain Market Expiry & Status Verification
+        const expiryCheck = await checkPoolExpiryOnchain(POOL_ADDRESS);
+        if (expiryCheck.isExpired) {
+          const msg = "This 15m window has expired. Refreshing to the latest active pool...";
+          showToast(msg, "warning");
+          addLog("POOL", msg, "text-amber-400 font-bold");
+          await refreshActiveMarketPool();
+          return;
+        }
+
+        addLog("IOC_HEDGE", `[JUDGE ACTION] Submitting Downside Hedge Order (BUY_NO) for 1 contract via ${truncateAddress(POOL_ADDRESS)}...`, "text-rose-400 font-bold");
 
         const hedgePrice = 520_000n; // 0.52 USDC limit (52%)
         const hedgeQuantity = 1_000_000n; // 1 contract (1e6)
@@ -885,7 +1164,7 @@
             args: [POOL_ADDRESS, maxUint256],
             account: userAddress
           });
-          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}/tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>. Waiting for confirmation...`, "text-cyan-400");
+          addLog("APPROVE", `Approval submitted! Tx: <a href="${EXPLORER_URL}tx/${approveHash}" target="_blank" class="text-cyan-300 underline font-mono">${truncateAddress(approveHash)}</a>. Waiting for confirmation...`, "text-cyan-400");
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
           addLog("APPROVE", "Approval confirmed on-chain.", "text-emerald-400");
         }
@@ -909,17 +1188,21 @@
           account: userAddress
         });
 
-        addLog("IOC_HEDGE", `Downside Hedge Order submitted! Tx: <a href="${EXPLORER_URL}/tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>. Waiting for confirmation...`, "text-purple-400");
+        addLog("IOC_HEDGE", `Downside Hedge Order submitted! Tx: <a href="${EXPLORER_URL}tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>. Waiting for confirmation...`, "text-purple-400");
         await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-        addLog("IOC_HEDGE", `Downside Hedge Order placed & confirmed! Tx: <a href="${EXPLORER_URL}/tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>`, "text-emerald-400 font-bold");
+        addLog("IOC_HEDGE", `Downside Hedge Order placed & confirmed! Tx: <a href="${EXPLORER_URL}tx/${txHash}" target="_blank" class="text-rose-300 underline font-mono font-bold">${truncateAddress(txHash)}</a>`, "text-emerald-400 font-bold");
+        showToast("Downside Hedge Order confirmed on-chain!", "success");
         await refreshBalances();
       } catch (err) {
         console.error("Downside Hedge error:", err);
         if (isUserRejected(err)) {
           addLog("[INFO]", "Transaction cancelled by user.", "text-amber-400");
+          showToast("Transaction cancelled by user.", "warning");
         } else {
-          addLog("IOC_HEDGE", `Hedge placement failed: ${err.shortMessage || err.message}`, "text-rose-400");
+          const reason = extractRevertReason(err);
+          showToast(`Hedge order failed: ${reason}`, "error");
+          addLog("REVERT", `Hedge placement reverted: ${reason}`, "text-rose-400 font-bold");
         }
       } finally {
         btnLiveHedge.disabled = false;
@@ -1047,7 +1330,8 @@
         expiryTimer.textContent = `${m}m ${s < 10 ? '0' : ''}${s}s`;
       } else {
         expiryTimer.textContent = "WINDOW RESOLVED";
-        addLog("SETTLER", "Market window closed. Invoking redeem() to recycle 1:1 collateral...", "text-emerald-400 font-bold");
+        addLog("SETTLER", "Market window closed. Refreshing to the latest active pool and invoking redeem()...", "text-emerald-400 font-bold");
+        refreshActiveMarketPool();
         timeRemainingSec = 900; // roll window
       }
     }, 1000);
@@ -1093,18 +1377,52 @@
       }
     }, 3000);
 
-    // Event Listeners for Web3 Actions
+    // Event Listeners for Web3 Actions & Judge Sandbox Controls
     btnWallet.addEventListener('click', connectWallet);
     btnDisconnect.addEventListener('click', disconnectWallet);
     btnMintSet.addEventListener('click', handleMintSet);
     btnLiveHedge.addEventListener('click', handleDownsideHedge);
 
-    // Expose helpers globally for console / testing
+    const btnDiscoverPools = document.getElementById('btn-discover-pools');
+    if (btnDiscoverPools) {
+      btnDiscoverPools.addEventListener('click', () => refreshActiveMarketPool());
+    }
+
+    const selectPool = document.getElementById('select-pool');
+    if (selectPool) {
+      selectPool.addEventListener('change', (e) => {
+        if (e.target.value) refreshActiveMarketPool(e.target.value);
+      });
+    }
+
+    const btnApplyPool = document.getElementById('btn-apply-pool');
+    if (btnApplyPool) {
+      btnApplyPool.addEventListener('click', () => {
+        const customAddr = document.getElementById('input-pool-address')?.value?.trim();
+        if (customAddr && customAddr.startsWith('0x') && customAddr.length === 42) {
+          refreshActiveMarketPool(customAddr);
+        } else {
+          showToast("Please enter a valid 42-character contract address (0x...)", "warning");
+        }
+      });
+    }
+
+    // Expose helpers globally for console / testing / judges
     window.ensureSomniaNetwork = ensureSomniaNetwork;
     window.ensureShannonNetwork = ensureSomniaNetwork;
     window.handleMintSet = handleMintSet;
     window.handleDownsideHedge = handleDownsideHedge;
     window.handleLiveHedge = handleDownsideHedge;
+    window.discoverActivePools = discoverActivePools;
+    window.refreshActiveMarketPool = refreshActiveMarketPool;
+    window.setActiveMarketPool = setActiveMarketPool;
+    window.checkPoolExpiryOnchain = checkPoolExpiryOnchain;
+    window.showToast = showToast;
+    window.showFaucetBanner = showFaucetBanner;
+    window.hideFaucetBanner = hideFaucetBanner;
+
+    // Initial pool discovery on startup
+    refreshActiveMarketPool();
 
     // Auto-reconnect if window.ethereum has authorized accounts
     if (window.ethereum) {
